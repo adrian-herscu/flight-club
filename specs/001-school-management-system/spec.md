@@ -5,6 +5,18 @@
 **Status**: Draft  
 **Input**: User description: "System for managing a school of paragliders and hangliders..."
 
+## Clarifications
+
+### Session 24 February 2026
+
+- Q: Lesson Duration and Scheduling Model → A: Start time + duration model. Lessons have scheduled start time and duration (in hours). Conflict detection calculates by time window and location. Multiple instructors on same lesson don't extend duration.
+- Q: Student Enrollment Approval Workflow → A: MVP uses explicit admin approval queue. Admins review pending requests and approve/reject; students see pending status. Architecture designed for future payment integration (V2) where payment status will also factor into auto-approval rules; enrollment entity includes fields for payment tracking.
+- Q: Course Capacity and Enrollment Limits → A: Optional capacity limit with FIFO waitlist. When course reaches max_students, further approvals go to waitlist. Waitlist students auto-enroll when spots open (via unenrollment) or when an identical/similar course is created. Admins set max during course creation; unlimited if not set.
+- Q: Instructor Notes Visibility and Timing → A: Notes visible only after lesson is marked complete. Notes categorized as "feedback" (visible to student, email sent) or "admin-only" (visible only to admins/instructors, silent). Student-visible notes trigger email notification.
+- Q: School Admin Management and Permissions → A: All school admins have equal permissions (no hierarchy). Each admin can manage courses, students, instructors, and view all school data. System prevents deleting the last admin of a school; at least one admin must remain active.
+
+---
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Super-Admin Sets Up Syllabuses (Priority: P1)
@@ -256,12 +268,12 @@ The system foundation supports future functionality for customers to order tande
 - **FR-004**: System MUST allow super-admins to create and manage reusable syllabuses with lesson definitions
 - **FR-005**: System MUST allow school admins to create new courses based on super-admin-defined syllabuses
 - **FR-006**: System MUST allow school admins to customize syllabuses when creating courses (modify, add, remove lessons)
-- **FR-007**: System MUST allow school admins to manually enroll students or accept student registration requests
-- **FR-008**: System MUST allow students to self-register and request enrollment in available courses from their school
+- **FR-007**: System MUST allow school admins to manually enroll students or accept/reject student registration requests through an approval queue; rejected requests include optional reason message
+- **FR-008**: System MUST allow students to self-register and request enrollment in available courses from their school; enrollment requests go to pending state pending admin approval
 - **FR-009**: System MUST allow school admins to assign one or more instructors to courses
-- **FR-010**: System MUST prevent an instructor from being assigned to overlapping lessons by tracking dates, times, and locations
+- **FR-010**: System MUST prevent an instructor from being assigned to overlapping lessons by checking if the lesson's start time + duration conflicts with any other lesson they are assigned to at the same location
 - **FR-011**: System MUST display an instructor's course schedule showing all assigned lessons with dates, locations, and student rosters
-- **FR-012**: System MUST allow instructors to write textual notes about individual students for each lesson
+- **FR-012**: System MUST allow instructors to write textual notes about individual students for each lesson; notes are categorized as "feedback" (visible to students after lesson completion, triggers email) or "admin-only" (visible only to school admins/instructors)
 - **FR-013**: System MUST require instructors to record a PASS or FAIL evaluation for each student when marking a lesson as complete
 - **FR-014**: System MUST track course progress by showing which lessons have been completed relative to the syllabus
 - **FR-015**: System MUST send email notifications to students about upcoming lessons (date, time, location, instructor info)
@@ -272,18 +284,23 @@ The system foundation supports future functionality for customers to order tande
 - **FR-020**: System MUST support the ability for future integrations with instant messaging services without requiring core architecture changes
 - **FR-021**: System MUST be deployable to cloud infrastructure (scalable, stateless application design)
 - **FR-022**: System MUST allow super-admins to manage system-wide settings and user roles
+- **FR-023**: System MUST support optional course capacity limits (max_students) set by admins during course creation
+- **FR-024**: System MUST manage student enrollment waitlists using FIFO (first-in-first-out) ordering when a course reaches capacity
+- **FR-025**: System MUST automatically enroll waitlist students when capacity becomes available through student unenrollment or when a similar course is created
+- **FR-026**: System MUST ensure all school admins have equal permissions within their school (no admin hierarchy)
+- **FR-027**: System MUST prevent deletion of the last active admin in a school; system enforces that at least one admin remains active per school
 
 ### Key Entities
 
 - **Syllabus**: Defines the structure of a course with a sequence of lessons. Created by super-admins. Has title, description, lessons. A syllabus belongs to no specific school.
 - **Lesson**: A component of a syllabus. Has title, description, duration, and learning objectives. Lessons are reusable across multiple courses.
 - **Course**: An instance of a syllabus taught at a specific school with specific dates, locations, and instructors. Belongs to a school. Contains enrolled students and assigned instructors. Status (upcoming, in-progress, completed).
-- **CourseLesson**: An instance of a lesson within a specific course. Has scheduled date, time, location. Links to the lesson template from the syllabus. Has a status (not-started, in-progress, completed).
+- **CourseLesson**: An instance of a lesson within a specific course. Has scheduled start time, duration (in hours), and location. Links to the lesson template from the syllabus. Instructor overbooking is detected by comparing start time + duration across all instructors' assignments for the same location. Status (not-started, in-progress, completed).
 - **School**: A tenant in the system. Has a name, configuration settings, associated admins, instructors, students, and courses. Isolated from other schools.
 - **User**: An entity representing a person. Has email (from Google), first name, last name, profile picture. Can have multiple roles across different schools.
 - **UserRole**: Represents a user's role within a school or system-wide. User can be student in school A, instructor in school B, admin in school C. Roles: super-admin (system-wide), school-admin (school-specific), instructor (school-specific), student (school-specific).
-- **StudentEnrollment**: Links a student to a course. Has status (pending-approval, enrolled, unenrolled, completed). Tracks enrollment date.
-- **StudentLessonEvaluation**: Records a student's PASS/FAIL result for a specific lesson within a course. Created by instructor. Has date, evaluation (PASS/FAIL), instructor notes, student notes field.
+- **StudentEnrollment**: Links a student to a course. Has status (pending-approval, approved, enrolled, waitlist, rejected, unenrolled, completed). Tracks enrollment date, rejection reason if applicable, and waitlist position (FIFO order). Includes optional payment_id and payment_status fields for future payment integration (V2).
+- **StudentLessonEvaluation**: Records a student's PASS/FAIL result for a specific lesson within a course. Created by instructor. Has date, evaluation (PASS/FAIL), and categorized instructor notes: "feedback" (visible to student, email sent) or "admin-only" (visible only to staff). Instructor can update notes before lesson is marked complete; notes become immutable after completion.
 - **InstructorAssignment**: Links an instructor to a course. Has assignment date. Prevents overbooking by checking date/time conflicts.
 
 ## Success Criteria
@@ -307,7 +324,7 @@ The system foundation supports future functionality for customers to order tande
 
 - The system will be built as a web application (responsive to both desktop and mobile browsers), not native mobile apps
 - Google OAuth 2.0 integration is available and properly configured in the project infrastructure
-- Email service is available for notifications (via a service like SendGrid, AWS SES, or similar)
+- Email service is available for notifications (via **Resend API** per constitution; free tier: 3k emails/month)
 - Schools will have 1-10 admins, 2-30 instructors, and 10-500 students in the initial version
 - Courses will typically have 1-3 instructors, 5-50 students, and 5-30 lessons per syllabus
 - Lessons are typically 2-4 hours long for paragliding/hangliding training
