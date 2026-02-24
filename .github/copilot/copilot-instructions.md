@@ -244,6 +244,11 @@ When context files don't provide specific guidance:
   Use log levels consistently: `DEBUG` for internal state, `INFO` for normal
   operations, `WARNING` for recoverable anomalies, `ERROR` for exceptions.
   Never log PII (email, name, licence number) at `DEBUG`/`INFO` level.
+- **Migrations**: all schema and data changes use Alembic migration scripts.
+  Data migrations (backfills, reshaping, seed data) MUST be in versioned Alembic
+  scripts alongside the DDL, never in ad-hoc scripts. Every data migration MUST
+  be idempotent. Backfills MUST process rows in batches (≤ 500 rows/transaction)
+  to avoid table locks. Tenant CSV onboarding is an API feature, not a migration.
 - Follow `backend/src/` naming: `snake_case` modules, `PascalCase` models,
   `snake_case` functions.
 

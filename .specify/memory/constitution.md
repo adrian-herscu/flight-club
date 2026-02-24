@@ -1,22 +1,20 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.2.2 → 1.3.0
+Version change: 1.3.0 → 1.4.0
 Modified principles: none
 Added guidance:
-  - Technology Stack table: Logging row added (Python logging + Render/Supabase/
-    Vercel built-in dashboards; Betterstack Logtail / Axiom at Tier 1+).
-  - New "Observability & Logging" subsection in Technology Stack & Architecture:
-    structured JSON logging policy, request_id threading, per-tier log access
-    procedures, debugging workflow, Sentry for client-side errors at Tier 1.
+  - Development Workflow: "Database & Data Migrations" entry expanded from a
+    single bullet into a full policy covering schema migrations, data migrations,
+    backfills, idempotency, batching, seed data, and tenant CSV onboarding.
+  - .github/copilot/copilot-instructions.md ✅ — data migration rules added to
+    Python/FastAPI section.
 Removed: N/A
 Templates checked:
   - .specify/templates/plan-template.md ✅ — no structural change needed
   - .specify/templates/spec-template.md ✅ — no structural change needed
   - .specify/templates/tasks-template.md ✅ — no structural change needed
   - .specify/templates/commands/*.md ⚠ PENDING — directory does not exist in repo
-  - .github/copilot/copilot-instructions.md ✅ — logging guidance added to
-    Python/FastAPI section.
 Follow-up TODOs: none
 -->
 
@@ -285,9 +283,29 @@ docs/       # ADRs, data-model diagrams, API changelog
 - **Deployment**: Vercel auto-deploys `main` (frontend) and Render auto-deploys
   `main` (backend) on every push via GitHub integration. Feature branches deploy
   to Vercel preview environments automatically.
-- **Database migrations**: MUST be applied via Alembic (`make migrate`) as part
-  of the deploy pipeline. Supabase schema changes via Supabase CLI migrations
-  committed to `infra/supabase/`. Manual SQL changes to production are forbidden.
+- **Database & Data Migrations**: all schema and data changes are managed through
+  the same versioned pipeline — Alembic for backend models, Supabase CLI for
+  Supabase-managed objects. Both run via `make migrate` in the deploy pipeline.
+  Manual SQL changes to production are forbidden.
+
+  *Schema migrations (DDL)*: column additions, table renames, index changes.
+  MUST be backwards-compatible (see Principle I) unless a MAJOR version bump is
+  declared with a documented migration plan.
+
+  *Data migrations (DML)*: row backfills, data reshaping, reference/seed data
+  loading, destructive cleanups. Rules:
+  - MUST live in versioned Alembic migration scripts alongside the DDL that
+    necessitates them — never in ad-hoc scripts or applied out-of-band.
+  - Every data migration MUST be **idempotent**: safe to run multiple times
+    without producing duplicate or inconsistent results.
+  - Backfills on existing rows MUST be **batched** (e.g. process 500 rows per
+    transaction) to avoid long table locks, even while the dataset is small.
+  - Reference / seed data (FAI rating levels, country codes, glider
+    manufacturers) MUST be loaded via a dedicated seed migration, not hardcoded
+    in application logic.
+  - Tenant CSV / spreadsheet onboarding (importing an existing school's members,
+    aircraft, log records) is an **application feature** implemented through the
+    API — not a database migration.
 - **Secrets**: stored exclusively in Vercel environment variables (frontend) and
   Render environment variables (backend). Supabase service-role key MUST only be
   held server-side (never exposed to the browser). Nothing secret is ever
@@ -313,4 +331,4 @@ that introduces the conflict.
   be recorded in the plan's "Complexity Tracking" section with measurable
   justification.
 
-**Version**: 1.3.0 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-24
+**Version**: 1.4.0 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-24
