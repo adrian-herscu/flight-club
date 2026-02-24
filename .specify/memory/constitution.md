@@ -1,18 +1,22 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.2.1 → 1.2.2
+Version change: 1.2.2 → 1.3.0
 Modified principles: none
-Added guidance: none
-Fixed: stale `infra/` comment ("Railway config" → Vercel/Render/Supabase layout).
+Added guidance:
+  - Technology Stack table: Logging row added (Python logging + Render/Supabase/
+    Vercel built-in dashboards; Betterstack Logtail / Axiom at Tier 1+).
+  - New "Observability & Logging" subsection in Technology Stack & Architecture:
+    structured JSON logging policy, request_id threading, per-tier log access
+    procedures, debugging workflow, Sentry for client-side errors at Tier 1.
+Removed: N/A
 Templates checked:
   - .specify/templates/plan-template.md ✅ — no structural change needed
   - .specify/templates/spec-template.md ✅ — no structural change needed
   - .specify/templates/tasks-template.md ✅ — no structural change needed
   - .specify/templates/commands/*.md ⚠ PENDING — directory does not exist in repo
-  - .github/copilot/copilot-instructions.md ✅ — synced: wrong paths fixed,
-    project description corrected, application directory structure added,
-    Python/FastAPI/Next.js/testing/secrets guidelines added.
+  - .github/copilot/copilot-instructions.md ✅ — logging guidance added to
+    Python/FastAPI section.
 Follow-up TODOs: none
 -->
 
@@ -191,6 +195,8 @@ amendment to this section with documented justification.
 | CI/CD | GitHub Actions | Free for public repos; deploys to Vercel + Render on merge |
 | Backend tests | pytest + httpx | Standard, well-documented async test support |
 | E2E tests | Playwright | Cross-browser; integrates with GitHub Actions |
+| Logging (Tier 0) | Render / Supabase / Vercel dashboards | Built-in, zero setup, free |
+| Logging (Tier 1+) | Betterstack Logtail or Axiom | Structured search, free tier available |
 
 **Current scale assumptions** (proof-of-concept / Tier 0):
 < 20 concurrent users · < 1 GB database · single school tenant · fully free hosting.
@@ -202,6 +208,41 @@ async `httpx` calls. Inbound webhooks are plain HTTP POST endpoints. The only
 operational constraint is the Render free-tier cold start for inbound webhooks
 (resolved at Tier 1 — see Principle V). Scheduled polling tasks use APScheduler
 (Tier 0) or Supabase pg_cron (Tier 1+).
+
+**Observability & Logging**
+
+All application logs MUST be structured JSON emitted to `stdout`/`stderr`.
+Every log entry that relates to an API request MUST include the `request_id`
+field (see Principle II) to enable cross-service correlation.
+
+*Backend (FastAPI / Render)*: Python `logging` module configured with a JSON
+formatter; Render captures `stdout`/`stderr` and exposes them in the Render
+dashboard (7-day retention on free tier; live-tail available). No log agent to
+install.
+
+*Database & Auth (Supabase)*: Supabase Logs Explorer provides pre-categorised
+views — API, Auth, Postgres, Storage — each filterable by `request_id`,
+status code, and time range. Free tier retains 1 day; Pro retains 7 days.
+
+*Frontend (Next.js / Vercel)*: Vercel Functions tab captures server-side logs
+per invocation. Free tier retains 1 hour (Pro: 1 day). Client-side JS errors
+are NOT captured — add **Sentry** (free tier) at Tier 1 for real-user monitoring.
+
+*Structured log search (Tier 1+)*: pipe Render log drain to **Betterstack
+Logtail** or **Axiom** (both free up to generous limits) for full-text search,
+alerting, and retention beyond platform defaults.
+
+*Standard debugging workflow*:
+1. Identify approximate time and affected user from the report.
+2. Supabase Auth logs → locate the session → copy `request_id`.
+3. Render logs → filter by `request_id` → read FastAPI exception + stack trace.
+4. Supabase Postgres logs → find the failing query → identify constraint or
+   timeout.
+5. Vercel logs → confirm what the frontend sent and received.
+
+*Tier 0 caveat*: Render free instances pause after 15 min of inactivity; wake
+the instance by hitting the app URL before attempting to reproduce an issue
+and live-tail logs.
 
 **Planned future modules** (not yet in scope; require separate feature specs):
 - *Payments*: Stripe (credit/debit cards) + PayPal; client-side tokenisation
@@ -272,4 +313,4 @@ that introduces the conflict.
   be recorded in the plan's "Complexity Tracking" section with measurable
   justification.
 
-**Version**: 1.2.2 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-24
+**Version**: 1.3.0 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-24

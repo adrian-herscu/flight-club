@@ -239,6 +239,11 @@ When context files don't provide specific guidance:
 - All tenant-scoped DB queries MUST filter by `school_id` (see Principle I).
 - JWT verification uses Supabase's public JWKS endpoint; never hardcode keys.
 - Supabase service-role key is server-side only; never pass it to frontend code.
+- **Logging**: configure Python `logging` with a JSON formatter writing to
+  `stdout`. Every log record related to a request MUST include `request_id`.
+  Use log levels consistently: `DEBUG` for internal state, `INFO` for normal
+  operations, `WARNING` for recoverable anomalies, `ERROR` for exceptions.
+  Never log PII (email, name, licence number) at `DEBUG`/`INFO` level.
 - Follow `backend/src/` naming: `snake_case` modules, `PascalCase` models,
   `snake_case` functions.
 
