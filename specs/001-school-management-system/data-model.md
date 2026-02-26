@@ -109,26 +109,28 @@ Two-tier course template system: super-admins create system-wide **prototypes** 
 |--------|------|-------------|-------|
 | `id` | `UUID` | PK | |
 | `school_id` | `UUID` | FK → `school.id`, NULLABLE | NULL = system-wide prototype (read-only to schools); NOT NULL = school-specific (editable by school admins only) |
-| `source_syllabus_id` | `UUID` | FK → `syllabus.id`, NULLABLE | Tracks prototype lineage if this syllabus was copied from a prototype. Null = created from scratch or is itself a prototype. |
+| `source_syllabus_id` | `UUID` | FK → `syllabus.id`, NULLABLE | Lineage pointer: for a copied syllabus, points to the immediate source (prototype or prior version). Null = created from scratch or is itself a prototype. |
 | `title` | `VARCHAR(255)` | NOT NULL | |
 | `description` | `TEXT` | NULLABLE | |
 | `discipline` | `VARCHAR(50)` | NOT NULL, default `'paragliding_hangliding'` | |
 | `created_by` | `UUID` | FK → `user.id`, NOT NULL | Super-admin (if school_id NULL) or school-admin (if school_id NOT NULL) |
 | `is_active` | `BOOLEAN` | NOT NULL, default `true` | Soft-delete; inactive syllabuses not shown in browse |
-| `version` | `INTEGER` | NOT NULL, default `1` | Bumped when school-specific syllabus is edited. Courses created from version N freeze lessons at that version; later edits don't affect them. |
+| `version` | `INTEGER` | NOT NULL, default `1` | Immutable once created. Editing creates a new syllabus row with `version = source.version + 1`. Courses created from version N freeze lessons at that version; later edits don't affect them. |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
-**Unique constraint**: `(school_id, title)` — no duplicate syllabus titles within a school, and no duplicate titles across system-wide prototypes.
+**Unique constraint**: `(school_id, title, version)` — allows multiple versions of the same syllabus title within a school or prototype lineage.
+**Business rule — Current version computation**: "Current" (latest) syllabus is determined at query time as the row with maximum `version` for each `(school_id, title)`. This avoids race conditions from concurrent edits. Query pattern: `SELECT * FROM syllabus WHERE (school_id, title) = (?, ?) AND is_active = true ORDER BY version DESC LIMIT 1`.
 
 **Ownership & Visibility**:
 - **System-wide prototype** (`school_id IS NULL`): Created by super-admin. All school-admins can browse, view, and **copy**. Cannot edit, delete, or use directly in course creation (must copy first).
 - **School-specific** (`school_id NOT NULL`): Created by school-admin (via copy or from scratch). Only that school's admins can browse, view, edit, delete, or use in course creation. Completely exclusive to that school.
 
 **Edit & Versioning**:
-- When a school-admin edits a school-specific syllabus, `version` is incremented.
+- `version` is immutable once created.
+- Editing a syllabus creates a new row: copy lessons, set `source_syllabus_id = previous.id`, set `version = previous.version + 1`, set `is_current = true`, and flip the previous row’s `is_current = false`.
 - Courses reference a syllabus version at creation time (lessons have nullable `source_lesson_id` FK + parent syllabus version).
-- Subsequent edits to the syllabus (title, lessons) do not affect courses created from prior versions.
+- Subsequent edits do not affect courses created from prior versions.
 
 **Copy Workflow**:
 - School-admin browses system-wide prototypes → selects one → requests copy.

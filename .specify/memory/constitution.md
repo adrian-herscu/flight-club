@@ -27,11 +27,18 @@ Follow-up TODOs: none
 The data model MUST reflect the target sport-aviation domain precisely before any
 UI or API layer is designed.
 
-**Current focus — paragliding and hang gliding schools.**
-Core entities for this phase:
-Pilot, Glider, FlightBooking, Instructor, RatingCertificate, Endorsement,
-GroundSchoolSession, School.
+**Current focus — paragliding and hang gliding schools (school management feature).**
+Core entities for this feature (001-school-management-system):
+School, User, UserRole, Syllabus, Lesson, Course, CourseLesson, StudentEnrollment,
+InstructorAssignment, StudentLessonEvaluation.
 No feature may introduce an entity whose domain meaning is ambiguous or redundant.
+
+**Note on core entities**: Different features may define different core entities based
+on their domain focus. This feature prioritizes training program management (syllabuses,
+courses, evaluations); future features (e.g., tandem bookings, maintenance) may
+introduce Pilot, Glider, FlightBooking, RatingCertificate, Endorsement if their specs
+ratify them. Entities MUST NOT be duplicated across features; if a future feature
+needs an overlapping entity, architecture refactoring will be prioritized.
 
 **Planned future entities** (not yet in scope; reserve namespace only):
 Equipment (harnesses, reserves, instruments), SupplyOrder, RepairOrder,
@@ -96,9 +103,9 @@ data). Security controls are mandatory, not optional.
   that the FastAPI backend verifies against Supabase's public JWKS endpoint.
 - **No server-side sessions**: the system is stateless. Every API request MUST
   carry an `Authorization: Bearer <jwt>` header. No cookies, no session store.
-- **Authorisation**: role-based access control with at minimum three roles:
-  `admin`, `instructor`, `member`, stored as a custom claim in the JWT and
-  mirrored in the `school_member` table. Privilege escalation requires explicit
+- **Authorisation**: role-based access control with four roles (`super_admin`,
+  `school_admin`, `instructor`, `student`), stored as a custom claim in the JWT
+  and mirrored in the `UserRole` table. Privilege escalation requires explicit
   admin approval recorded in the audit log.
 - Data at rest MUST be encrypted (managed by Supabase / cloud provider).
 - Data in transit MUST use TLS 1.2+; HTTP is forbidden in production.

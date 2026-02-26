@@ -8,7 +8,9 @@ description: "Task list for School Management System implementation"
 **Input**: Design documents from /specs/001-school-management-system/
 **Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/
 
-**Tests**: Not included (no explicit TDD requirement in spec).
+**Tests**: Test-first development required per constitution Principle III. Contract tests
+and integration tests MUST be written (and fail) before implementation tasks begin.
+All test tasks are marked [P] to indicate parallelization with corresponding implementation.
 
 **Organization**: Tasks grouped by user story to enable independent implementation and testing of each story.
 
@@ -76,6 +78,8 @@ description: "Task list for School Management System implementation"
 - [ ] T023 [US11] Apply role guards in backend/src/api/v1/router.py
 - [ ] T024 [US11] Add role-gated UI components in frontend/src/components/RoleGate.tsx and frontend/src/components/NavShell.tsx
 - [ ] T025 [US11] Create role landing pages in frontend/src/app/super-admin/page.tsx, frontend/src/app/admin/page.tsx, frontend/src/app/instructor/page.tsx, frontend/src/app/student/page.tsx
+- [ ] T025a [US11] Write contract test for equal admin permissions in backend/tests/contract/test_admin_equality.py (verify no admin has privilege that others don't)
+- [ ] T025b [US11] Write enforcement validation in backend/src/services/role_service.py to prevent admin permission hierarchy
 
 ---
 
@@ -83,7 +87,10 @@ description: "Task list for School Management System implementation"
 
 **Goal**: Each school's data is fully isolated across all roles.
 
-**Independent Test**: Admins/students from School A cannot see School B data.
+**Goal**: Each school's data is fully isolated across all roles.
+
+**Independent Test**: Admins/students from School A cannot see School B data. This test
+MUST be written and execute BEFORE implementation begins (test-first per constitution).
 
 ### Tests for User Story 9 (FIRST - Must FAIL before implementation)
 
