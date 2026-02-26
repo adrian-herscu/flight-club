@@ -16,25 +16,25 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Create backend dependency files in backend/requirements.txt and backend/requirements-dev.txt
-- [ ] T002 Create frontend project configuration in frontend/package.json, frontend/next.config.js, frontend/tsconfig.json
-- [ ] T003 [P] Configure linting/formatting in backend/pyproject.toml, frontend/.eslintrc.cjs, frontend/.prettierrc
-- [ ] T004 [P] Add environment templates in backend/.env.example and frontend/.env.local.example
-- [ ] T005 [P] Add project automation targets in Makefile (test, lint, build, migrate, seed)
+- [x] T001 Create backend dependency files in backend/requirements.txt and backend/requirements-dev.txt
+- [x] T002 Create frontend project configuration in frontend/package.json, frontend/next.config.js, frontend/tsconfig.json
+- [x] T003 [P] Configure linting/formatting in backend/pyproject.toml, frontend/.eslintrc.cjs, frontend/.prettierrc
+- [x] T004 [P] Add environment templates in backend/.env.example and frontend/.env.local.example
+- [x] T005 [P] Add project automation targets in Makefile (test, lint, build, migrate, seed)
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T006 Setup Alembic scaffolding in backend/alembic.ini and backend/alembic/env.py
-- [ ] T007 Create DB session/base model in backend/src/core/db.py and backend/src/models/base.py
-- [ ] T008 Create settings/config loader in backend/src/core/config.py
-- [ ] T009 Implement response envelope + error helpers in backend/src/core/responses.py and backend/src/core/exceptions.py
-- [ ] T010 Add request_id middleware in backend/src/core/middleware/request_id.py and register in backend/src/main.py
-- [ ] T011 Add API v1 router + health endpoint in backend/src/api/v1/router.py, backend/src/api/v1/health.py, backend/src/main.py
-- [ ] T012 [P] Add frontend API client wrapper in frontend/src/services/apiClient.ts
-- [ ] T013 [P] Create base layouts + navigation shell in frontend/src/app/layout.tsx and frontend/src/components/NavShell.tsx
-- [ ] T014 [P] Add shared API response types in frontend/src/services/types.ts
+- [x] T006 Setup Alembic scaffolding in backend/alembic.ini and backend/alembic/env.py
+- [x] T007 Create DB session/base model in backend/src/core/db.py and backend/src/models/base.py
+- [x] T008 Create settings/config loader in backend/src/core/config.py
+- [x] T009 Implement response envelope + error helpers in backend/src/core/responses.py and backend/src/core/exceptions.py
+- [x] T010 Add request_id middleware in backend/src/core/middleware/request_id.py and register in backend/src/main.py
+- [x] T011 Add API v1 router + health endpoint in backend/src/api/v1/router.py, backend/src/api/v1/health.py, backend/src/main.py
+- [x] T012 [P] Add frontend API client wrapper in frontend/src/services/apiClient.ts
+- [x] T013 [P] Create base layouts + navigation shell in frontend/src/app/layout.tsx and frontend/src/components/NavShell.tsx
+- [x] T014 [P] Add shared API response types in frontend/src/services/types.ts
 
 ---
 
@@ -46,17 +46,17 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 10 (FIRST - Must FAIL before implementation)
 
-- [ ] T015a [P] [US10] Write contract test for /api/v1/me endpoint in backend/tests/contract/test_auth_me.py
-- [ ] T015b [P] [US10] Write integration test for Google auth flow (user creation on first login) in backend/tests/integration/test_google_auth.py
+- [x] T015a [P] [US10] Write contract test for /api/v1/me endpoint in backend/tests/contract/test_auth_me.py
+- [x] T015b [P] [US10] Write integration test for Google auth flow (user creation on first login) in backend/tests/integration/test_google_auth.py
 
 ### Implementation for User Story 10
 
-- [ ] T015 [P] [US10] Add Supabase client setup in frontend/src/services/supabaseClient.ts
-- [ ] T016 [US10] Implement login/logout pages in frontend/src/app/(auth)/login/page.tsx and frontend/src/app/(auth)/logout/page.tsx
-- [ ] T017 [US10] Implement /api/v1/me endpoint in backend/src/api/v1/auth.py
-- [ ] T018 [US10] Add User model/schema/service in backend/src/models/user.py, backend/src/schemas/user.py, backend/src/services/user_service.py
-- [ ] T019 [US10] Sync user profile on auth in backend/src/services/auth_service.py and backend/src/api/v1/auth.py
-- [ ] T020 [US10] Add frontend auth guard + redirect logic in frontend/src/middleware.ts
+- [x] T015 [P] [US10] Add Supabase client setup in frontend/src/services/supabaseClient.ts
+- [x] T016 [US10] Implement login/logout pages in frontend/src/app/(auth)/login/page.tsx and frontend/src/app/(auth)/logout/page.tsx
+- [x] T017 [US10] Implement /api/v1/me endpoint in backend/src/api/v1/auth.py
+- [x] T018 [US10] Add User model/schema/service in backend/src/models/user.py, backend/src/schemas/user.py, backend/src/services/user_service.py
+- [x] T019 [US10] Sync user profile on auth in backend/src/services/auth_service.py and backend/src/api/v1/auth.py
+- [x] T020 [US10] Add frontend auth guard + redirect logic in frontend/src/middleware.ts
 
 ---
 
@@ -68,43 +68,40 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 11 (FIRST - Must FAIL before implementation)
 
-- [ ] T021a [P] [US11] Write contract test for role-gating in backend/tests/contract/test_rbac.py (verify student cannot access admin endpoints)
-- [ ] T021b [P] [US11] Write integration test for role-based access enforcement in backend/tests/integration/test_rbac_enforcement.py
+- [x] T021a [P] [US11] Write contract test for role-gating in backend/tests/contract/test_rbac.py (verify student cannot access admin endpoints)
+- [x] T021b [P] [US11] Write integration test for role-based access enforcement in backend/tests/integration/test_rbac_enforcement.py
 
 ### Implementation for User Story 11
 
-- [ ] T021 [P] [US11] Add UserRole model/schema in backend/src/models/user_role.py and backend/src/schemas/user_role.py
-- [ ] T022 [US11] Implement RBAC dependencies in backend/src/core/rbac.py and backend/src/services/role_service.py
-- [ ] T023 [US11] Apply role guards in backend/src/api/v1/router.py
-- [ ] T024 [US11] Add role-gated UI components in frontend/src/components/RoleGate.tsx and frontend/src/components/NavShell.tsx
-- [ ] T025 [US11] Create role landing pages in frontend/src/app/super-admin/page.tsx, frontend/src/app/admin/page.tsx, frontend/src/app/instructor/page.tsx, frontend/src/app/student/page.tsx
-- [ ] T025a [US11] Write contract test for equal admin permissions in backend/tests/contract/test_admin_equality.py (verify no admin has privilege that others don't)
+- [x] T021 [P] [US11] Add UserRole model/schema in backend/src/models/user_role.py and backend/src/schemas/user_role.py
+- [x] T022 [US11] Implement RBAC dependencies in backend/src/core/rbac.py and backend/src/services/role_service.py
+- [x] T023 [US11] Apply role guards in backend/src/api/v1/router.py
+- [x] T024 [US11] Add role-gated UI components in frontend/src/components/RoleGate.tsx and frontend/src/components/NavShell.tsx
+- [x] T025 [US11] Create role landing pages in frontend/src/app/super-admin/page.tsx, frontend/src/app/admin/page.tsx, frontend/src/app/instructor/page.tsx, frontend/src/app/student/page.tsx
+- [x] T025a [US11] Write contract test for equal admin permissions in backend/tests/contract/test_admin_equality.py (verify no admin has privilege that others don't)
 - [ ] T025b [US11] Write enforcement validation in backend/src/services/role_service.py to prevent admin permission hierarchy
 
 ---
 
 ## Phase 5: User Story 9 - Multi-Tenant Isolation (Priority: P1)
 
-**Goal**: Each school's data is fully isolated across all roles.
+**Goal**: Each school's data is fully isolated across all roles. Admins/students from School A cannot see School B data.
 
-**Goal**: Each school's data is fully isolated across all roles.
-
-**Independent Test**: Admins/students from School A cannot see School B data. This test
-MUST be written and execute BEFORE implementation begins (test-first per constitution).
+**Independent Test**: Admins/students from School A cannot see School B data. This test MUST be written and execute BEFORE implementation begins (test-first per constitution).
 
 ### Tests for User Story 9 (FIRST - Must FAIL before implementation)
 
-- [ ] T026a [P] [US9] Write contract test for tenant isolation in backend/tests/contract/test_tenant_isolation.py (verify admin A cannot access school B courses)
-- [ ] T026b [P] [US9] Write integration test for row-level isolation enforcement in backend/tests/integration/test_tenant_isolation.py
+- [x] T026a [P] [US9] Write contract test for tenant isolation in backend/tests/contract/test_tenant_isolation.py (verify admin A cannot access school B courses)
+- [x] T026b [P] [US9] Write integration test for row-level isolation enforcement in backend/tests/integration/test_tenant_isolation.py
 
 ### Implementation for User Story 9
 
-- [ ] T026 [P] [US9] Add School model/schema in backend/src/models/school.py and backend/src/schemas/school.py
-- [ ] T027 [US9] Implement tenant scoping helpers in backend/src/core/tenancy.py and apply in services
-- [ ] T028 [US9] Implement schools endpoints in backend/src/api/v1/schools.py
-- [ ] T029 [US9] Add school context provider in frontend/src/services/schoolContext.tsx
-- [ ] T030 [US9] Add school switcher UI in frontend/src/components/SchoolSwitcher.tsx
-- [ ] T031 [US9] Create migration for schools/users/roles in backend/alembic/versions/0001_create_schools_users_roles.py
+- [x] T026 [P] [US9] Add School model/schema in backend/src/models/school.py and backend/src/schemas/school.py
+- [x] T027 [US9] Implement tenant scoping helpers in backend/src/core/tenancy.py and apply in services
+- [x] T028 [US9] Implement schools endpoints in backend/src/api/v1/schools.py
+- [x] T029 [US9] Add school context provider in frontend/src/services/schoolContext.tsx
+- [x] T030 [US9] Add school switcher UI in frontend/src/components/SchoolSwitcher.tsx
+- [x] T031 [US9] Create migration for schools/users/roles in backend/alembic/versions/0001_create_schools_users_roles.py
 
 ---
 
@@ -116,17 +113,17 @@ MUST be written and execute BEFORE implementation begins (test-first per constit
 
 ### Tests for User Story 1 (FIRST - Must FAIL before implementation)
 
-- [ ] T032a [P] [US1] Write contract test for syllabus CRUD in backend/tests/contract/test_syllabuses.py
-- [ ] T032b [P] [US1] Write integration test for lesson ordering and syllabus visibility in backend/tests/integration/test_syllabuses.py
+- [x] T032a [P] [US1] Write contract test for syllabus CRUD in backend/tests/contract/test_syllabuses.py
+- [x] T032b [P] [US1] Write integration test for lesson ordering and syllabus visibility in backend/tests/integration/test_syllabuses.py
 
 ### Implementation for User Story 1
 
-- [ ] T032 [P] [US1] Add Syllabus/Lesson models+schemas in backend/src/models/syllabus.py, backend/src/models/lesson.py, backend/src/schemas/syllabus.py
-- [ ] T033 [US1] Add migration for syllabuses/lessons in backend/alembic/versions/0002_create_syllabuses_lessons.py
-- [ ] T034 [US1] Implement syllabus service in backend/src/services/syllabus_service.py
-- [ ] T035 [US1] Implement syllabus endpoints in backend/src/api/v1/syllabuses.py
-- [ ] T036 [US1] Build super-admin syllabus UI in frontend/src/app/super-admin/syllabuses/page.tsx and frontend/src/components/SyllabusForm.tsx
-- [ ] T037 [US1] Build admin syllabus browse UI in frontend/src/app/admin/syllabuses/page.tsx
+- [x] T032 [P] [US1] Add Syllabus/Lesson models+schemas in backend/src/models/syllabus.py, backend/src/models/lesson.py, backend/src/schemas/syllabus.py
+- [x] T033 [US1] Add migration for syllabuses/lessons in backend/alembic/versions/0002_create_syllabuses_lessons.py
+- [x] T034 [US1] Implement syllabus service in backend/src/services/syllabus_service.py
+- [x] T035 [US1] Implement syllabus endpoints in backend/src/api/v1/syllabuses.py
+- [x] T036 [US1] Build super-admin syllabus UI in frontend/src/app/super-admin/syllabuses/page.tsx and frontend/src/components/SyllabusForm.tsx
+- [x] T037 [US1] Build admin syllabus browse UI in frontend/src/app/admin/syllabuses/page.tsx
 
 ---
 
@@ -235,15 +232,14 @@ MUST be written and execute BEFORE implementation begins (test-first per constit
 
 ---
 
-## Phase 14: User Story 8 - School Admin Customizes Syllabuses (Priority: P2)
+## Phase 14: User Story 8 - School Admin Selects Syllabus Version (Priority: P2)
 
-**Goal**: Admins customize lessons when creating a course.
+**Goal**: Admins choose which final syllabus version to use when creating a course.
 
-**Independent Test**: Customized course lessons differ from syllabus and display correctly.
+**Independent Test**: A course created from a prior final version matches that version’s lessons exactly.
 
-- [ ] T072 [US8] Extend course creation schema for custom lessons in backend/src/schemas/course.py
-- [ ] T073 [US8] Implement customization branch in backend/src/services/course_service.py
-- [ ] T074 [US8] Build customization UI in frontend/src/components/CourseCustomizationForm.tsx and frontend/src/app/admin/courses/new/page.tsx
+- [ ] T072 [US8] Update course creation UI to allow selecting any final syllabus version in frontend/src/app/admin/courses/new/page.tsx
+- [ ] T073 [US8] Validate selected syllabus version is final in backend/src/services/course_service.py
 
 ---
 
@@ -268,7 +264,7 @@ MUST be written and execute BEFORE implementation begins (test-first per constit
 
 ---
 
-## Phase 18: Coverage Completions - Missing Requirements (Priority: P1 support)
+## Phase 17: Coverage Completions - Missing Requirements (Priority: P1 support)
 
 **Purpose**: Address requirements not covered by primary user story phases. These tasks support P1 stories with critical features.
 
@@ -284,7 +280,7 @@ MUST be written and execute BEFORE implementation begins (test-first per constit
 
 ---
 
-## Phase 17: Polish & Cross-Cutting Concerns
+## Phase 18: Polish & Cross-Cutting Concerns
 
 - [ ] T078 [P] Update OpenAPI metadata and response envelope docs in backend/src/main.py
 - [ ] T079 [P] Add seed utilities in backend/src/services/seed.py and Makefile

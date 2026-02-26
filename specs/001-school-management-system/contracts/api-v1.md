@@ -39,7 +39,7 @@
 
 ### `GET /health`
 
-Public. Returns server health.
+Public. Returns server health. Does **not** follow standard response envelope.
 
 **Response 200**:
 ```json
@@ -52,7 +52,7 @@ Public. Returns server health.
 
 ### `GET /api/v1/me`
 
-Returns the authenticated user's profile and all their role memberships.
+Returns the authenticated user's profile and all their role memberships. On first login (user record does not exist), this endpoint automatically creates the `User` record from the Supabase JWT claims (email, name, avatar).
 
 **Response 200**:
 ```json
@@ -90,7 +90,16 @@ Returns all schools.
 {
   "name": "Sky High Paragliding School",
   "slug": "sky-high",
-  "discipline": "paragliding_hangliding"
+  "company_id": "ABN1234567890",
+  "email": "admin@skyhigh.com",
+  "phone_number": "+1-619-555-0123",
+  "discipline": "paragliding_hangliding",
+  "address_street": "123 Launch Road",
+  "address_city": "San Diego",
+  "address_region": "CA",
+  "address_country": "US",
+  "address_postal_code": "92109",
+  "default_currency": "USD"
 }
 ```
 
@@ -141,9 +150,11 @@ Assigns a role to an existing user within the school.
 ### `GET /api/v1/syllabuses`
 
 **Roles**: all authenticated  
-Returns active final syllabuses visible to the user (system-wide + school-specific for their school).
+Returns syllabuses based on the context of the request:
+- **When creating a course** (no context or `?context=course_creation`): Returns active **final** syllabuses visible to the user (system-wide + school-specific for their school).
+- **When editing drafts** (`?context=editing`): Returns only the **latest active draft** per syllabus (their own school drafts) + active **final** syllabuses they can create drafts from.
 
-**Query params**: `discipline`, `page`, `page_size`
+**Query params**: `context` (optional: `course_creation`, `editing`), `discipline`, `page`, `page_size`
 
 **Response 200**:
 ```json
@@ -270,7 +281,7 @@ Returns courses available for enrollment within the student’s school (not yet 
 
 **Roles**: super_admin, school_admin
 
-Creates a course from a **final** syllabus. The `syllabus_id` must reference a final (immutable) syllabus. The syllabus version is determined by the referenced syllabus row's `version` field.
+Creates a course from a **final** syllabus. The `syllabus_id` must reference a final (immutable) syllabus. The syllabus version is determined by the referenced syllabus row's `version` field. Courses must follow the syllabus exactly; lesson content cannot be customized. A course is only considered `planned` once the **first lesson** has a scheduled `start_time` and `location` set by an assigned instructor.
 
 **Request body**:
 ```json
@@ -278,14 +289,9 @@ Creates a course from a **final** syllabus. The `syllabus_id` must reference a f
   "syllabus_id": "uuid",           // must be a final syllabus (status='final')
   "title": "Spring P2 Course 2026",
   "description": "...",
-  "max_students": 15,
-  "customize": false,
-  "lessons": null
+  "max_students": 15
 }
 ```
-
-If `customize: true`, caller MUST provide `lessons` array (overrides the syllabus's lessons for this course only).  
-If `customize: false`, lessons are copied from the specified syllabus automatically.
 
 **Response 201**: course with embedded `course_lessons`, bound immutably to the final syllabus.  
 **Response 409**: if `syllabus_id` references a draft (must be final) or if the syllabus is inactive.
@@ -297,7 +303,7 @@ If `customize: false`, lessons are copied from the specified syllabus automatica
 ### `PATCH /api/v1/schools/{school_id}/courses/{course_id}`
 
 **Roles**: super_admin, school_admin  
-Partial update: `title`, `description`, `max_students`. `status` is system-derived; only `cancelled` may be set explicitly.
+Partial update: `title`, `description`, `max_students`. `status` is system-derived; only `cancelled` may be set explicitly and only if course has not started (`status = planned`). `planned` → `running` occurs automatically when the first lesson starts (unless admin override is required).
 
 ### `DELETE /api/v1/schools/{school_id}/courses/{course_id}`
 
@@ -318,9 +324,9 @@ Sets `status = cancelled` and triggers notifications to enrolled students and as
 
 ### `PATCH /api/v1/schools/{school_id}/courses/{course_id}/lessons/{lesson_id}`
 
-**Roles**: super_admin, school_admin  
-Partial update: `title`, `description`, `duration_hours`, `start_time`, `location`, `sequence_order`.  
-Changing `start_time`, `duration_hours`, or `location` re-triggers overbooking check for all assigned instructors.
+**Roles**: instructor (assigned)  
+Partial update: `start_time`, `location` only. Lesson content (`title`, `description`, `duration_hours`, `sequence_order`) is immutable and must match the syllabus.  
+Changing `start_time` or `location` re-triggers overbooking check for all assigned instructors. Lesson start requires assigned instructor and no conflicts; lesson auto-starts at `start_time` if all enrolled students are paid, otherwise a school admin must override.
 
 ### `POST /api/v1/schools/{school_id}/courses/{course_id}/lessons/{lesson_id}/complete`
 
@@ -401,9 +407,26 @@ Returns assigned lessons ordered by `start_time`. For school_admin and instructo
 
 **Roles**: super_admin, school_admin, student (own)
 
+### `PATCH /api/v1/schools/{school_id}/courses/{course_id}/enrollments/{enrollment_id}`
+
+**Roles**: super_admin, school_admin
+
+Updates enrollment fields controlled by the school admin (e.g., marking payment received).
+
+**Request body**:
+```json
+{
+  "payment_status": "paid" // allowed: "paid", "not_paid"
+}
+```
+
+**Response 200**: updated enrollment.
+
 ### `POST /api/v1/schools/{school_id}/courses/{course_id}/enrollments/{enrollment_id}/approve`
 
 **Roles**: super_admin, school_admin
+
+**Business rule**: School admin marks student as paid via `PATCH` to set `payment_status = 'paid'`. After payment is recorded, admin calls this endpoint. Approval directly transitions status to `enrolled` (if capacity) or `waitlist` (if full); there is no intermediate `approved` state.
 
 **Response 200**: enrollment with updated status (`enrolled` or `waitlist` if at capacity).
 
@@ -420,8 +443,9 @@ Returns assigned lessons ordered by `start_time`. For school_admin and instructo
 
 ### `DELETE /api/v1/schools/{school_id}/courses/{course_id}/enrollments/{enrollment_id}`
 
-**Roles**: super_admin, school_admin, student (own)  
-Sets `status = unenrolled`. Triggers FIFO waitlist promotion if applicable.
+**Roles**: super_admin, school_admin (any student), student (own, only if `status = 'pending_approval'` or `'waitlist'`)
+
+**Business rule**: Students can exit the waitlist themselves. Once enrolled (after payment and admin approval), only school admins can unenroll students. Admins can choose to set `status = waiting` (student wants the next course, with student agreement) or `status = unenrolled` (not interested). Refunds are handled externally; the system records only `paid`/`not_paid`. Triggers FIFO waitlist promotion if applicable.
 
 ---
 
@@ -439,7 +463,7 @@ Returns all evaluations for the lesson.
 ### `PUT /api/v1/schools/{school_id}/courses/{course_id}/lessons/{lesson_id}/evaluations/{student_id}`
 
 **Roles**: instructor (assigned)  
-Create or update evaluation. Upsert semantics.
+Create or update evaluation. Upsert semantics. Email notifications to students are sent **only after the lesson is marked complete** (when `course_lesson.status = 'completed'`), not when evaluation notes are initially saved.
 
 **Request body**:
 ```json

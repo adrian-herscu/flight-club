@@ -79,7 +79,8 @@ LIMIT 1;
 **Decision**: `StudentEnrollment.status` as a PostgreSQL enum with states: `pending_approval → approved → enrolled → completed | rejected | unenrolled | waitlist`.
 
 **Rationale**:
-- Spec clarification: explicit admin approval queue; waitlist uses FIFO ordering.
+- Spec clarification: explicit admin approval queue; waitlist uses FIFO ordering; no intermediate `approved` state.
+- Admin approval directly transitions to `enrolled` (if capacity) or `waitlist` (if full).
 - DB enum prevents invalid state values; Python `enum.Enum` mirrors it for type safety.
 - `waitlist_position` integer column (nullable) enables FIFO ordering without a separate table.
 
@@ -88,9 +89,12 @@ LIMIT 1;
 pending_approval  ──(admin approve, capacity available)──► enrolled
 pending_approval  ──(admin approve, at capacity)──────────► waitlist
 pending_approval  ──(admin reject)────────────────────────► rejected
-enrolled          ──(student unenroll / admin remove)──────► unenrolled
-waitlist          ──(spot opens)────────────────────────────► enrolled (auto, FIFO)
-enrolled          ──(all lessons complete)─────────────────► completed
+enrolled          ──(admin unenroll)────────────────────────► unenrolled
+waitlist          ──(student exit / admin unenroll)────────► unenrolled
+waitlist          ──(spot opens via unenrollment, FIFO)───► enrolled
+waitlist          ──(student accepts similar course offer)► enrolled (in new course)
+enrolled / waitlist ──(course cancelled)──────────────────► waiting
+enrolled          ──(all lessons complete)──────────────────► completed
 ```
 
 **Alternatives considered**:
@@ -150,7 +154,7 @@ def require_role(*roles: Role):
 
 ## 7. Course Progress Tracking
 
-**Decision**: Computed from `course_lesson.status` aggregation — no separate `course_progress` table. `CourseLesson.status` enum: `not_started | in_progress | completed`. Course `status` derived: `upcoming` (no lessons started) → `in_progress` (≥ 1 completed) → `completed` (all completed).
+**Decision**: Computed from `course_lesson.status` aggregation — no separate `course_progress` table. `CourseLesson.status` enum: `not_started | in_progress | completed`. Course `status` derived: `planned` (first lesson scheduled) → `running` (first lesson started) → `completed` (all completed). `cancelled` only before `running`.
 
 **Rationale**:
 - Avoids denormalized state that can drift out of sync.

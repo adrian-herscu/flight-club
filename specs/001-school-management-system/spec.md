@@ -13,12 +13,17 @@
 - Q: Student Enrollment Approval Workflow → A: MVP uses explicit admin approval queue. Admins review pending requests and approve/reject; students see pending status. Architecture designed for future payment integration (V2) where payment status will also factor into auto-approval rules; enrollment entity includes fields for payment tracking.
 - Q: Course Capacity and Enrollment Limits → A: Optional capacity limit with FIFO waitlist. When course reaches max_students, further approvals go to waitlist. Waitlist students auto-enroll when spots open (via unenrollment) or when an identical/similar course is created. Admins set max during course creation; unlimited if not set.
 - Q: Instructor Notes Visibility and Timing → A: Notes visible only after lesson is marked complete. Notes categorized as "feedback" (visible to student, email sent) or "admin-only" (visible only to admins/instructors, silent). Student-visible notes trigger email notification.
-- Q: School Admin Management and Permissions → A: All school admins have equal permissions (no hierarchy). Each admin can manage courses, students, instructors, and view all school data. System prevents deleting the last admin of a school; at least one admin must remain active.- Q: What defines "similar course" for waitlist auto-enrollment (FR-025)? → A: Two courses are considered "similar" if they share the same `syllabus_id` (same curriculum) and `school_id` (same school) and their creation dates are within 14 days of each other. When a new similar course is created, students on the waitlist of an older course with the same syllabus are offered enrollment in the new course via email; they may accept to auto-enroll.
+- Q: School Admin Management and Permissions → A: All school admins have equal permissions (no hierarchy). Each admin can manage courses, students, instructors, and view all school data. System prevents deleting the last admin of a school; at least one admin must remain active.
+- Q: What defines "similar course" for waitlist auto-enrollment (FR-025)? → A: Two courses are considered "similar" if they share the same `syllabus_id` (same curriculum) and `school_id` (same school) and their creation dates are within 14 days of each other. When a new similar course is created, students on the waitlist of an older course with the same syllabus are offered enrollment in the new course via email; they may accept to auto-enroll.
 
 ### Session 26 February 2026
 
 - Q: Syllabus Versioning and Draft/Final States → A: Syllabuses use a draft/final state model combined with versioning. When a syllabus is created, it starts in **Draft** state. Edits to a draft do NOT create new versions—the draft is freely editable. When a draft is finalized, it becomes a **Final** version (immutable). Editing a final version automatically creates a new **Draft** as its child; each final version has at most one active draft. Courses can ONLY bind to final (versioned) syllabuses—they bind immutably to a specific final version for the life of the course. When a school admin creates a course, the system suggests the latest final version as default, but admins can choose any previous final version. Visibility: school admins see the latest final versions of (their school's own syllabuses + system admin syllabuses). School-defined syllabuses are exclusive to their school and never visible to other schools. System syllabuses are visible to all schools.
 - Q: Course Opening and Lesson Scheduling Workflow → A: School admin opens a course and assigns instructor(s). Students can enroll in the course. Once enrolled, an instructor sets lessons for specific site/date combinations. The system manages scheduling and conflict detection based on the defined parameters.
+- Q: Payment approval and enrollment → A: Payment is managed externally. School admin marks a student as paid (`payment_status = paid`) before approving enrollment. Approval moves the student directly to `enrolled` (if capacity) or `waitlist` (if full); there is no intermediate `approved` state.
+- Q: Syllabus creation → A: Syllabuses can be created from scratch or based on another syllabus. System syllabuses are created/edited only by super-admins and are available to all schools as base syllabuses; school syllabuses are exclusive to their school.
+- Q: Course customization → A: Courses must follow the defining syllabus exactly. No on-the-fly customization of lesson content is allowed. Courses only add lesson scheduling (start time/location) and instructor notes about students.
+- Q: Course status → A: Courses have statuses `planned`, `running`, `completed`, `cancelled`. `planned` means the first lesson has a scheduled date/time; `running` means the first lesson has started; `cancelled` means the course never ran.
 
 ---
 
@@ -141,19 +146,18 @@ Students and instructors receive email notifications about upcoming lessons with
 
 ---
 
-### User Story 8 - School Admin Customizes Syllabuses (Priority: P2)
+### User Story 8 - School Admin Selects Syllabus Version (Priority: P2)
 
-A school admin takes a super-admin-defined syllabus and modifies it for their specific needs, adding, removing, or changing lessons while creating a course.
+A school admin selects which **final** syllabus version to use when creating a course. Course lesson content is immutable and must match that syllabus version.
 
-**Why this priority**: Customization allows schools to adapt content to their teaching philosophy and student needs. Important for differentiation but secondary to basic course management.
+**Why this priority**: Selection of a syllabus version enables consistent training outcomes and auditability without per-course customization.
 
-**Independent Test**: A school admin selects a syllabus, modifies lesson order or content, creates a custom course, and the course reflects the customized structure. This demonstrates syllabus flexibility.
+**Independent Test**: A school admin selects a prior final version of a syllabus and creates a course; the course lessons match that version exactly.
 
 **Acceptance Scenarios**:
 
-1. **Given** a syllabus is available, **When** a school admin creates a course and selects "customize," **Then** they can edit lesson titles, descriptions, and durations
-2. **Given** a syllabus is being customized, **When** the admin removes a lesson, **Then** the custom course excludes that lesson
-3. **Given** a custom course is created, **When** an instructor views it, **Then** they see the customized lesson structure
+1. **Given** multiple final versions of a syllabus exist, **When** a school admin creates a course, **Then** they can choose which final version to bind
+2. **Given** a course is created from a syllabus version, **When** an instructor views the course, **Then** the lesson content matches that version exactly
 
 ---
 
@@ -272,7 +276,7 @@ The system foundation supports future functionality for customers to order tande
 - **FR-003**: System MUST enforce multi-tenant isolation so each school's data is completely separated from other schools
 - **FR-004**: System MUST allow super-admins to create and manage reusable syllabuses with lesson definitions
 - **FR-005**: System MUST allow school admins to create new courses based on super-admin-defined syllabuses
-- **FR-006**: System MUST allow school admins to customize syllabuses when creating courses (modify, add, remove lessons)
+- **FR-006**: System MUST ensure courses follow the defining syllabus exactly (no lesson content customization in the course)
 - **FR-007**: System MUST allow school admins to manually enroll students or accept/reject student registration requests through an approval queue; rejected requests include optional reason message
 - **FR-008**: System MUST allow students to self-register and request enrollment in available courses from their school; enrollment requests go to pending state pending admin approval
 - **FR-009**: System MUST allow school admins to assign one or more instructors to courses
@@ -291,7 +295,7 @@ The system foundation supports future functionality for customers to order tande
 - **FR-022**: System MUST allow super-admins to manage system-wide settings and user roles
 - **FR-023**: System MUST support optional course capacity limits (max_students) set by admins during course creation
 - **FR-024**: System MUST manage student enrollment waitlists using FIFO (first-in-first-out) ordering when a course reaches capacity
-- **FR-025**: System MUST automatically enroll waitlist students when capacity becomes available through student unenrollment or when a similar course is created
+- **FR-025**: System MUST automatically enroll waitlist students when capacity becomes available through student unenrollment; when a similar course is created, the system MUST offer enrollment and enroll only after the student accepts
 - **FR-026**: System MUST ensure all school admins have equal permissions within their school (no admin hierarchy)
 - **FR-027**: System MUST prevent deletion of the last active admin in a school; system enforces that at least one admin remains active per school
 
@@ -299,8 +303,8 @@ The system foundation supports future functionality for customers to order tande
 
 - **Syllabus**: Defines the structure of a course with a sequence of lessons. Uses draft/final states combined with versioning. New syllabuses start in **Draft** state and are freely editable without creating versions. When finalized, a draft becomes a **Final** version (immutable). Editing a final version creates a new **Draft** as its child (each final version has at most one active draft). Has title, description, lessons, status (draft or final), version number (null for drafts), and parent_syllabus_id (points to the final version it was created from). Scope is either system-wide (created by super-admins, visible to all schools) or school-specific (created by school admins, exclusive to their school). Courses bind immutably only to final syllabuses. School admins see latest final versions of available syllabuses but can choose previous final versions when creating courses.
 - **Lesson**: A component of a syllabus. Has title, description, duration, and learning objectives. Lessons are reusable across multiple courses.
-- **Course**: An instance of a specific syllabus *version* taught at a specific school with specific dates, locations, and instructors. Belongs to a school. Contains enrolled students and assigned instructors. Status (upcoming, in-progress, completed). The bound syllabus version is immutable for the life of the course.
-- **CourseLesson**: An instance of a lesson within a specific course. Has scheduled start time, duration (in hours), and location. Links to the lesson template from the syllabus. Instructor overbooking is detected by comparing start time + duration across all instructors' assignments for the same location. Status (not-started, in-progress, completed).
+- **Course**: An instance of a specific syllabus *version* taught at a specific school with specific dates, locations, and instructors. Belongs to a school. Contains enrolled students and assigned instructors. Status (`planned`, `running`, `completed`, `cancelled`). The bound syllabus version is immutable for the life of the course.
+- **CourseLesson**: An instance of a lesson within a specific course. Has scheduled start time, duration (in hours), and location. Links to the lesson template from the syllabus. Instructor overbooking is detected by comparing start time + duration across all instructors' assignments for the same location. Status (not-started, in-progress, completed). Lessons start automatically at `start_time` if all enrolled students are paid; otherwise a school admin must override.
 - **School**: A tenant in the system. Has a name, configuration settings, associated admins, instructors, students, and courses. Isolated from other schools.
 - **User**: An entity representing a person. Has email (from Google), first name, last name, profile picture. Can have multiple roles across different schools.
 - **UserRole**: Represents a user's role within a school or system-wide. User can be student in school A, instructor in school B, admin in school C. Roles: super-admin (system-wide), school-admin (school-specific), instructor (school-specific), student (school-specific).

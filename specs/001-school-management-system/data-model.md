@@ -110,7 +110,7 @@ Two-tier course template system with draft/final states: super-admins create sys
 |--------|------|-------------|-------|
 | `id` | `UUID` | PK | |
 | `school_id` | `UUID` | FK → `school.id`, NULLABLE | NULL = system-wide (created by super-admin, visible to all schools); NOT NULL = school-specific (exclusive to school) |
-| `parent_syllabus_id` | `UUID` | FK → `syllabus.id`, NULLABLE | Lineage pointer: for a draft created from a final version, points to that final version's id. Null for original drafts or for final syllabuses. |
+| `parent_syllabus_id` | `UUID` | FK → `syllabus.id`, NULLABLE | Lineage pointer: for a draft created from editing a final version (same school), points to that final version's id. **Null** for original/independent drafts (created from scratch or copied from a system-wide syllabus). When a school admin copies a system-wide syllabus, the new school-specific draft has `parent_syllabus_id = null` (new independent lineage). |
 | `title` | `VARCHAR(255)` | NOT NULL | |
 | `description` | `TEXT` | NULLABLE | |
 | `discipline` | `VARCHAR(50)` | NOT NULL, default `'paragliding_hangliding'` | |
@@ -182,14 +182,14 @@ An instance of a school-specific or school-owned syllabus taught at a specific s
 | `price_amount` | `NUMERIC(10,2)` | NULLABLE, CHECK `>= 0` | Manual list price for the course; informational only (payments handled externally) |
 | `price_currency` | `VARCHAR(3)` | NULLABLE | ISO 4217 currency code; must match `school.default_currency` when `price_amount` is set |
 | `price_notes` | `TEXT` | NULLABLE | Optional pricing notes (e.g., deposit rules, what’s included) |
-| `status` | `ENUM('upcoming','in_progress','completed','cancelled')` | NOT NULL, default `'upcoming'` | |
+| `status` | `ENUM('planned','running','completed','cancelled')` | NOT NULL, default `'planned'` | `planned` = first lesson scheduled (date/time set). `running` = first lesson started. `cancelled` means course did not run. |
 | `max_students` | `INTEGER` | NULLABLE, CHECK `> 0` | NULL = unlimited |
 | `created_by` | `UUID` | FK → `user.id`, NOT NULL | School admin who created it |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
-**Business rule**: `status` transitions `upcoming → in_progress → completed`; `cancelled` can be set from any state.  
-**Derived**: `status` updated to `in_progress` when first `CourseLesson` is marked `completed`; to `completed` when all `CourseLesson` rows are `completed`.  
+**Business rule**: `status` transitions `planned → running → completed`. `cancelled` is allowed only before `running` (course did not run). A course is only considered `planned` once the **first lesson** has a scheduled `start_time` and `location` set by the assigned instructor. `status` becomes `running` automatically when the first `CourseLesson` starts (based on `start_time`) if all enrolled students have `payment_status = 'paid'`; school admins may override to start even if payments are incomplete, but only when an instructor is assigned and there are no scheduling conflicts. When a course is cancelled, all enrolled and waitlist students are moved to `waiting` status, and all enrolled students and assigned instructors are notified via email.
+**Derived**: `status` updated to `running` when first `CourseLesson` starts (based on `start_time`, or admin override); to `completed` when all `CourseLesson` rows are `completed`.
 **Lesson copying**: When course is created, all Lesson rows from the referenced final syllabus are copied into CourseLesson rows. The course remains bound to that immutable syllabus version via `syllabus_id` FK. If a new final version is later created (by editing and finalizing), existing courses are unaffected.
 **Manual pricing rule**: if `price_amount` is set, `price_currency` is required and must match `school.default_currency`. Payments are handled externally and tracked per student via `StudentEnrollment.payment_id` and `payment_status`.
 
@@ -204,12 +204,12 @@ An instance of a lesson within a specific course. Has a scheduled time, location
 | `id` | `UUID` | PK | |
 | `course_id` | `UUID` | FK → `course.id`, NOT NULL | |
 | `source_lesson_id` | `UUID` | FK → `lesson.id`, NULLABLE | Traceability to syllabus template |
-| `title` | `VARCHAR(255)` | NOT NULL | Copied from lesson; may be customized |
-| `description` | `TEXT` | NULLABLE | |
-| `duration_hours` | `NUMERIC(4,2)` | NOT NULL, CHECK `> 0` | |
-| `sequence_order` | `INTEGER` | NOT NULL | |
-| `learning_objectives` | `TEXT[]` | NOT NULL, default `'{}'` | |
-| `start_time` | `TIMESTAMPTZ` | NULLABLE | Scheduled start; NULL = TBD |
+| `title` | `VARCHAR(255)` | NOT NULL | Copied from syllabus lesson; immutable for the course |
+| `description` | `TEXT` | NULLABLE | Copied from syllabus lesson; immutable for the course |
+| `duration_hours` | `NUMERIC(4,2)` | NOT NULL, CHECK `> 0` | Copied from syllabus lesson; immutable for the course |
+| `sequence_order` | `INTEGER` | NOT NULL | Copied from syllabus lesson; immutable for the course |
+| `learning_objectives` | `TEXT[]` | NOT NULL, default `'{}'` | Copied from syllabus lesson; immutable for the course |
+| `start_time` | `TIMESTAMPTZ` | NULLABLE | Scheduled start; NULL = TBD. Only assigned instructors can set `start_time` and `location`. Lessons start automatically when `start_time` arrives if all enrolled students have `payment_status = 'paid'`; school admins may override to start even if payments are incomplete, but only when an instructor is assigned and no conflicts exist. |
 | `location` | `VARCHAR(255)` | NULLABLE | Physical location (e.g., "Torrey Pines launch site") |
 | `status` | `ENUM('not_started','in_progress','completed','cancelled')` | NOT NULL, default `'not_started'` | |
 | `completed_at` | `TIMESTAMPTZ` | NULLABLE | Set when instructor marks complete |
@@ -252,22 +252,26 @@ Links a student to a course with status tracking and FIFO waitlist support.
 | `id` | `UUID` | PK | |
 | `course_id` | `UUID` | FK → `course.id`, NOT NULL | |
 | `student_id` | `UUID` | FK → `user.id`, NOT NULL | Must have `student` role in school |
-| `status` | `ENUM('pending_approval','enrolled','waitlist','rejected','unenrolled','completed')` | NOT NULL, default `'pending_approval'` | |
+| `status` | `ENUM('pending_approval','enrolled','waitlist','rejected','unenrolled','completed','waiting')` | NOT NULL, default `'pending_approval'` | No intermediate `approved` state; approval directly transitions to `enrolled` or `waitlist`. `waiting` used when a course is cancelled/postponed or when admin defers a paid student to a future course. |
 | `waitlist_position` | `INTEGER` | NULLABLE | NULL unless status = `waitlist`; FIFO ordering |
 | `rejection_reason` | `TEXT` | NULLABLE | Optional admin message on rejection |
 | `enrolled_at` | `TIMESTAMPTZ` | NULLABLE | Timestamp when status → `enrolled` |
 | `payment_id` | `VARCHAR(255)` | NULLABLE | External payment reference (e.g., invoice ID, transaction ID) for manual tracking |
-| `payment_status` | `VARCHAR(50)` | NULLABLE | Manual payment status ('pending', 'paid', 'refunded') — school admin marks student payment receipt for fees processed outside the system |
+| `payment_status` | `ENUM('not_paid','paid')` | NOT NULL, default `'not_paid'` | Manual payment status — school admin marks payment receipt for fees processed outside the system |
 | `requested_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | When student submitted request |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
 **Unique constraints**: 
-- `(course_id, student_id)` — one enrollment per student per course.
+- `(course_id, student_id)` — one enrollment per student per course (but see re-enrollment rule below).
+
+**Re-enrollment rule**: If a student unenrolls from a course, the `StudentEnrollment` row is soft-marked (`status = 'unenrolled'`). If the student later re-enrolls, a new `StudentEnrollment` row is created (not reused); waitlist position is assigned as FIFO at time of new request.
+
+**Waitlist exit rule**: Students can exit the waitlist themselves (sets `status = 'unenrolled'`). Once enrolled (after payment and admin approval), only school admins can unenroll students. When a school admin unenrolls a paid student, they can choose to move the student to `waiting` for the next course (with student agreement) or to `unenrolled` (not interested). Refunds are handled externally; the system records only `paid`/`not_paid`.
 - `(course_id, waitlist_position) WHERE waitlist_position IS NOT NULL` — no duplicate positions in waitlist.
 
 **FIFO rule**: `waitlist_position` assigned as `MAX(waitlist_position) + 1` for the course at time of waitlist entry; decremented when head-of-queue student is enrolled.
 **Auto-enrollment trigger**: when an enrolled student unenrolls, the service promotes the lowest `waitlist_position` student to `enrolled`.
-**Similar course trigger (FR-025)**: a newly created course is considered “similar” if it has the same `school_id` and `syllabus_id` and is created within 14 days of the waitlisted course. When a similar course is created, waitlisted students are offered enrollment via email; enrollment occurs only after the student accepts.
+**Similar course trigger (FR-025)**: a newly created course is considered "similar" if it has the same `school_id` and `syllabus_id` and is created within 14 days of the waitlisted course. When a similar course is created, waitlisted students are offered enrollment via email; they must accept the offer before being auto-enrolled.
 
 ---
 
@@ -291,9 +295,8 @@ Records a student's PASS/FAIL result and instructor notes for a specific lesson.
 **Unique constraint**: `(course_lesson_id, student_id)`.
 **Lifecycle**: evaluation rows are created on first instructor save (upsert) and are not pre-created at enrollment time.
 **Note**: While `is_immutable` is managed at application layer, consider PostgreSQL triggers to enforce `BEFORE UPDATE` rejection when `is_immutable = true`.
-**Visibility rule**: `feedback_notes` visible to student only when `course_lesson.status = 'completed'`.  
-**Immutability rule**: `is_immutable = true` after lesson completion; all update attempts rejected with HTTP 409.  
-**Email trigger**: when `feedback_notes` is saved (not null, not blank), email notification queued to student.
+**Visibility rule**: `feedback_notes` visible to student only when `course_lesson.status = 'completed'`. Email notifications to students are sent only after the lesson is marked complete, not when notes are initially saved.  
+**Immutability rule**: `is_immutable = true` after lesson completion; all update attempts rejected with HTTP 409.
 
 ---
 
@@ -315,21 +318,23 @@ Integrate a simple weather check during lesson scheduling. Instead of a separate
 [request]→ pending_approval ──(approve, capacity)──→ enrolled ──(all lessons done)──→ completed
                 │            ──(approve, full)────→ waitlist ──(spot opens, FIFO)──→ enrolled
                 └────────────(reject)─────────────→ rejected
-enrolled ────────────────────(unenroll)──────────→ unenrolled
+enrolled ────────────────────(admin unenroll)────→ unenrolled
+waitlist ────────────────────(student exit)──────→ unenrolled
+enrolled / waitlist ─────────(course cancelled)──→ waiting
 ```
 
 ### `CourseLesson.status`
 
 ```
-not_started ──(instructor starts)──→ in_progress ──(evaluations complete)──→ completed
-not_started / in_progress ──────────────────────────────────────────────────→ cancelled
+not_started ──(start_time arrives OR instructor override)──→ in_progress ──(evaluations complete)──→ completed
+not_started / in_progress ───────────────────────────────────────────────────→ cancelled
 ```
 
 ### `Course.status`
 
 ```
-upcoming ──(first lesson completed)──→ in_progress ──(all lessons completed)──→ completed
-any ───────────────────────────────────────────────────────────────────────────→ cancelled
+planned ──(first lesson starts)──→ running ──(all lessons completed)──→ completed
+planned ───────────────────────────────────────────────────────────────→ cancelled
 ```
 
 ---
