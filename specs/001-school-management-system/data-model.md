@@ -230,10 +230,11 @@ Links an instructor to a course lesson. Overbooking prevention enforced at inser
 | `assigned_by` | `UUID` | FK → `user.id`, NOT NULL | School admin who made assignment |
 | `assigned_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
-**Unique constraint**: `(course_lesson_id, instructor_id)` where `course_lesson_id IS NOT NULL`.  
-**Overbooking rule**: before insert, check for scheduling conflicts for the same `instructor_id` across all assigned `CourseLesson` rows:
-  1. **Same location**: reject if `[start_time, start_time + duration_hours)` overlaps with any existing lesson at the same `location`.
-  2. **Different locations**: reject if insufficient travel time; i.e., if `end_time_existing + travel_buffer > start_time_new` or `end_time_new + travel_buffer > start_time_existing` (where `travel_buffer` is a configurable duration, e.g., 1 hour, to account for travel + setup time). Admin must manually resolve conflicts by adjusting times or removing assignments.
+**Unique constraints**:
+- `(course_lesson_id, instructor_id)` where `course_lesson_id IS NOT NULL`.
+- `(course_id, instructor_id)` where `course_lesson_id IS NULL` (course-level assignment).
+**Course-level assignment behavior**: a course-level assignment applies to all current and future lessons in the course. When assigning at course level, the system checks conflicts against all scheduled lessons in the course; newly scheduled lessons must also pass the overbooking check before they can be assigned.
+**Overbooking rule**: before insert, check for scheduling conflicts for the same `instructor_id` across all assigned `CourseLesson` rows at the same `location`: reject if `[start_time, start_time + duration_hours)` overlaps with any existing lesson at the same `location`.
 
 ---
 
@@ -246,7 +247,7 @@ Links a student to a course with status tracking and FIFO waitlist support.
 | `id` | `UUID` | PK | |
 | `course_id` | `UUID` | FK → `course.id`, NOT NULL | |
 | `student_id` | `UUID` | FK → `user.id`, NOT NULL | Must have `student` role in school |
-| `status` | `ENUM('pending_approval','approved','enrolled','waitlist','rejected','unenrolled','completed')` | NOT NULL, default `'pending_approval'` | |
+| `status` | `ENUM('pending_approval','enrolled','waitlist','rejected','unenrolled','completed')` | NOT NULL, default `'pending_approval'` | |
 | `waitlist_position` | `INTEGER` | NULLABLE | NULL unless status = `waitlist`; FIFO ordering |
 | `rejection_reason` | `TEXT` | NULLABLE | Optional admin message on rejection |
 | `enrolled_at` | `TIMESTAMPTZ` | NULLABLE | Timestamp when status → `enrolled` |
@@ -261,6 +262,7 @@ Links a student to a course with status tracking and FIFO waitlist support.
 
 **FIFO rule**: `waitlist_position` assigned as `MAX(waitlist_position) + 1` for the course at time of waitlist entry; decremented when head-of-queue student is enrolled.
 **Auto-enrollment trigger**: when an enrolled student unenrolls, the service promotes the lowest `waitlist_position` student to `enrolled`.
+**Similar course trigger (FR-025)**: a newly created course is considered “similar” if it has the same `school_id` and `syllabus_id` and is created within 14 days of the waitlisted course. When a similar course is created, waitlisted students are offered enrollment via email; enrollment occurs only after the student accepts.
 
 ---
 
@@ -282,7 +284,8 @@ Records a student's PASS/FAIL result and instructor notes for a specific lesson.
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
 **Unique constraint**: `(course_lesson_id, student_id)`.
-**Note**: While `is_immutable` is managed at application layer, consider PostgreSQL triggers to enforce `BEFORE UPDATE` rejection when `is_immutable = true`.  
+**Lifecycle**: evaluation rows are created on first instructor save (upsert) and are not pre-created at enrollment time.
+**Note**: While `is_immutable` is managed at application layer, consider PostgreSQL triggers to enforce `BEFORE UPDATE` rejection when `is_immutable = true`.
 **Visibility rule**: `feedback_notes` visible to student only when `course_lesson.status = 'completed'`.  
 **Immutability rule**: `is_immutable = true` after lesson completion; all update attempts rejected with HTTP 409.  
 **Email trigger**: when `feedback_notes` is saved (not null, not blank), email notification queued to student.

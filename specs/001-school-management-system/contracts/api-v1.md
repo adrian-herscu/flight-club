@@ -258,6 +258,14 @@ Soft-delete (`is_active = false`). Works on both draft and final syllabuses.
 
 **Query params**: `status`, `page`, `page_size`
 
+### `GET /api/v1/schools/{school_id}/courses/available`
+
+**Roles**: student
+
+Returns courses available for enrollment within the student’s school (not yet enrolled).
+
+**Query params**: `status`, `page`, `page_size`
+
 ### `POST /api/v1/schools/{school_id}/courses`
 
 **Roles**: super_admin, school_admin
@@ -289,12 +297,12 @@ If `customize: false`, lessons are copied from the specified syllabus automatica
 ### `PATCH /api/v1/schools/{school_id}/courses/{course_id}`
 
 **Roles**: super_admin, school_admin  
-Partial update: `title`, `description`, `max_students`, `status`.
+Partial update: `title`, `description`, `max_students`. `status` is system-derived; only `cancelled` may be set explicitly.
 
 ### `DELETE /api/v1/schools/{school_id}/courses/{course_id}`
 
 **Roles**: super_admin, school_admin  
-Sets `status = cancelled`.
+Sets `status = cancelled` and triggers notifications to enrolled students and assigned instructors.
 
 ---
 
@@ -312,7 +320,7 @@ Sets `status = cancelled`.
 
 **Roles**: super_admin, school_admin  
 Partial update: `title`, `description`, `duration_hours`, `start_time`, `location`, `sequence_order`.  
-Changing `start_time` or `location` re-triggers overbooking check for all assigned instructors.
+Changing `start_time`, `duration_hours`, or `location` re-triggers overbooking check for all assigned instructors.
 
 ### `POST /api/v1/schools/{school_id}/courses/{course_id}/lessons/{lesson_id}/complete`
 
@@ -359,7 +367,7 @@ Marks lesson as `completed`.
 ### `GET /api/v1/instructors/{instructor_id}/schedule`
 
 **Roles**: super_admin, school_admin, instructor (own)  
-Returns all assigned lessons across all courses, ordered by `start_time`.
+Returns assigned lessons ordered by `start_time`. For school_admin and instructor roles, results are scoped to the requester’s school. Super-admins may use `school_id` to filter across schools.
 
 **Query params**: `school_id` (optional filter), `from_date`, `to_date`
 
@@ -426,7 +434,7 @@ Returns all evaluations for the lesson.
 
 ### `GET /api/v1/schools/{school_id}/courses/{course_id}/lessons/{lesson_id}/evaluations/{student_id}`
 
-**Roles**: super_admin, school_admin, instructor (assigned), student (own — `feedback_notes` only after lesson completion; `admin_notes` hidden)
+**Roles**: super_admin, school_admin, instructor (assigned), student (own — `result` and `feedback_notes` only after lesson completion; `admin_notes` hidden)
 
 ### `PUT /api/v1/schools/{school_id}/courses/{course_id}/lessons/{lesson_id}/evaluations/{student_id}`
 
