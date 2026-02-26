@@ -88,7 +88,7 @@ Maps a user to a role, either system-wide or within a specific school.
 |--------|------|-------------|-------|
 | `id` | `UUID` | PK | |
 | `user_id` | `UUID` | FK → `user.id`, NOT NULL | |
-| `school_id` | `UUID` | FK → `school.id`, NULLABLE | NULL for `super_admin` |
+| `school_id` | `UUID` | FK → `school.id`, NULLABLE, CHECK `(role = 'super_admin' AND school_id IS NULL) OR (role != 'super_admin' AND school_id IS NOT NULL)` | NULL for `super_admin` |
 | `role` | `ENUM('super_admin','school_admin','instructor','student')` | NOT NULL | |
 | `is_active` | `BOOLEAN` | NOT NULL, default `true` | Soft-disable without deleting |
 | `granted_by` | `UUID` | FK → `user.id`, NULLABLE | Audit: who assigned this role |
@@ -103,40 +103,45 @@ Maps a user to a role, either system-wide or within a specific school.
 
 ### 4. `Syllabus`
 
-Two-tier course template system: super-admins create system-wide **prototypes** (school_id IS NULL); school-admins copy prototypes to create **school-specific syllabuses** (school_id NOT NULL) which they can edit. Each school's syllabus is exclusive to that school.
+Two-tier course template system with draft/final states: super-admins create system-wide syllabuses (`school_id IS NULL`); school-admins can create and edit their own school-specific syllabuses (`school_id NOT NULL`). Syllabuses use a draft/final state model combined with versioning. In **Draft** state, edits do NOT create versions—the draft is freely editable. When finalized, a draft becomes an immutable **Final** version. Editing a final version creates a new **Draft** as its child. Courses ONLY bind to final (versioned) syllabuses, never drafts.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | `id` | `UUID` | PK | |
-| `school_id` | `UUID` | FK → `school.id`, NULLABLE | NULL = system-wide prototype (read-only to schools); NOT NULL = school-specific (editable by school admins only) |
-| `source_syllabus_id` | `UUID` | FK → `syllabus.id`, NULLABLE | Lineage pointer: for a copied syllabus, points to the immediate source (prototype or prior version). Null = created from scratch or is itself a prototype. |
+| `school_id` | `UUID` | FK → `school.id`, NULLABLE | NULL = system-wide (created by super-admin, visible to all schools); NOT NULL = school-specific (exclusive to school) |
+| `parent_syllabus_id` | `UUID` | FK → `syllabus.id`, NULLABLE | Lineage pointer: for a draft created from a final version, points to that final version's id. Null for original drafts or for final syllabuses. |
 | `title` | `VARCHAR(255)` | NOT NULL | |
 | `description` | `TEXT` | NULLABLE | |
 | `discipline` | `VARCHAR(50)` | NOT NULL, default `'paragliding_hangliding'` | |
-| `created_by` | `UUID` | FK → `user.id`, NOT NULL | Super-admin (if school_id NULL) or school-admin (if school_id NOT NULL) |
+| `created_by` | `UUID` | FK → `user.id`, NOT NULL | Super-admin (if `school_id IS NULL`) or school-admin (if `school_id NOT NULL`) |
+| `status` | `ENUM('draft','final')` | NOT NULL, default `'draft'` | Draft = freely editable, no version number. Final = immutable, has version number. |
+| `version` | `INTEGER` | NULLABLE, CHECK `(status = 'draft' AND version IS NULL) OR (status = 'final' AND version IS NOT NULL)` | Version number of final syllabuses. Null for drafts. |
 | `is_active` | `BOOLEAN` | NOT NULL, default `true` | Soft-delete; inactive syllabuses not shown in browse |
-| `version` | `INTEGER` | NOT NULL, default `1` | Immutable once created. Editing creates a new syllabus row with `version = source.version + 1`. Courses created from version N freeze lessons at that version; later edits don't affect them. |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
-**Unique constraint**: `(school_id, title, version)` — allows multiple versions of the same syllabus title within a school or prototype lineage.
-**Business rule — Current version computation**: "Current" (latest) syllabus is determined at query time as the row with maximum `version` for each `(school_id, title)`. This avoids race conditions from concurrent edits. Query pattern: `SELECT * FROM syllabus WHERE (school_id, title) = (?, ?) AND is_active = true ORDER BY version DESC LIMIT 1`.
+**Unique constraints**:
+- `UNIQUE (school_id, title, is_active) WHERE status = 'draft' AND is_active = true` — at most one active draft per title per school/system.
+- `UNIQUE (school_id, title, version) WHERE status = 'final'` — allows multiple final versions of same title.
+- `UNIQUE (parent_syllabus_id) WHERE status = 'draft' AND parent_syllabus_id IS NOT NULL AND is_active = true` — at most one active draft child per final syllabus.
+
+**Business rule — Current version computation**: For a given `(school_id, title)`, the "latest final version" is the row with maximum `version` where `status = 'final'`. The "active draft" (if any) is the row where `status = 'draft'` and `parent_syllabus_id = latest_final.id`. Query pattern: `SELECT * FROM syllabus WHERE (school_id, title) = (?, ?) AND is_active = true AND status = 'final' ORDER BY version DESC LIMIT 1`.
 
 **Ownership & Visibility**:
-- **System-wide prototype** (`school_id IS NULL`): Created by super-admin. All school-admins can browse, view, and **copy**. Cannot edit, delete, or use directly in course creation (must copy first).
-- **School-specific** (`school_id NOT NULL`): Created by school-admin (via copy or from scratch). Only that school's admins can browse, view, edit, delete, or use in course creation. Completely exclusive to that school.
+- **System-wide** (`school_id IS NULL`): Created by super-admin. All school-admins can browse and see latest final versions only. Cannot edit directly; must copy to create their own school-specific draft.
+- **School-specific** (`school_id NOT NULL`): Created by school-admin. Only that school's admins can browse, view, edit (if draft), finalize, or use in course creation. Other schools never see these syllabuses.
 
-**Edit & Versioning**:
-- `version` is immutable once created.
-- Editing a syllabus creates a new row: copy lessons, set `source_syllabus_id = previous.id`, set `version = previous.version + 1`, set `is_current = true`, and flip the previous row’s `is_current = false`.
-- Courses reference a syllabus version at creation time (lessons have nullable `source_lesson_id` FK + parent syllabus version).
-- Subsequent edits do not affect courses created from prior versions.
+**Draft & Finalize Workflow**:
+- Syllabus created → starts in **Draft** state.
+- School-admin edits draft freely (title, lessons, description) — no new versions created.
+- School-admin decides it's ready → **finalize** action → creates a Final version (immutable), assigns `version = (max prior version for this title) + 1`.
+- Editing a final version → system automatically creates a new **Draft** as its child (`parent_syllabus_id = final.id`, `version = null`, `status = 'draft'`). Each final version has at most one active draft.
+- Courses ONLY bind to final syllabuses; draft syllabuses cannot be used for course creation.
 
-**Copy Workflow**:
-- School-admin browses system-wide prototypes → selects one → requests copy.
-- System creates new Syllabus row: `school_id = requester's school`, copies all Lesson rows, sets `source_syllabus_id = prototype_id`, `version = 1`, `created_by = requester`.
-- School-admin can now edit this syllabus's title, lessons, description.
-- Other schools cannot see this copied syllabus.
+**Copy/Clone Workflow** (for school to adopt system syllabus):
+- School-admin browses system-wide final syllabuses → selects one → requests copy.
+- System creates new Syllabus row: `school_id = requester's school`, `status = 'draft'`, copies all Lesson rows, sets `parent_syllabus_id = null` (new independent lineage), `created_by = requester`.
+- School-admin can now edit this draft freely and finalize when ready.
 
 ---
 
@@ -170,8 +175,7 @@ An instance of a school-specific or school-owned syllabus taught at a specific s
 |--------|------|-------------|-------|
 | `id` | `UUID` | PK | |
 | `school_id` | `UUID` | FK → `school.id`, NOT NULL | Tenant key — course always belongs to a school |
-| `syllabus_id` | `UUID` | FK → `syllabus.id`, NOT NULL | Must reference a school-specific syllabus (school_id NOT NULL) or a system-wide prototype. Cannot be NULL. |
-| `syllabus_version` | `INTEGER` | NOT NULL | Version of the syllabus at time of course creation. Lessons frozen at this version; later syllabus edits don't affect this course. |
+| `syllabus_id` | `UUID` | FK → `syllabus.id`, NOT NULL | Must reference a final syllabus (status='final'). Course is immutably bound to this specific syllabus version. |
 | `title` | `VARCHAR(255)` | NOT NULL | May differ from syllabus title |
 | `description` | `TEXT` | NULLABLE | |
 | `status` | `ENUM('upcoming','in_progress','completed','cancelled')` | NOT NULL, default `'upcoming'` | |
@@ -182,7 +186,7 @@ An instance of a school-specific or school-owned syllabus taught at a specific s
 
 **Business rule**: `status` transitions `upcoming → in_progress → completed`; `cancelled` can be set from any state.  
 **Derived**: `status` updated to `in_progress` when first `CourseLesson` is marked `completed`; to `completed` when all `CourseLesson` rows are `completed`.  
-**Lesson copying**: When course is created, all Lesson rows from the syllabus are copied into CourseLesson rows at `syllabus_version`. If the syllabus is later edited (lessons added/removed/reordered), courses created from prior versions are unaffected.
+**Lesson copying**: When course is created, all Lesson rows from the referenced final syllabus are copied into CourseLesson rows. The course remains bound to that immutable syllabus version via `syllabus_id` FK. If a new final version is later created (by editing and finalizing), existing courses are unaffected.
 
 ---
 
@@ -251,8 +255,11 @@ Links a student to a course with status tracking and FIFO waitlist support.
 | `requested_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | When student submitted request |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
-**Unique constraint**: `(course_id, student_id)`.  
-**FIFO rule**: `waitlist_position` assigned as `MAX(waitlist_position) + 1` for the course at time of waitlist entry; decremented when head-of-queue student is enrolled.  
+**Unique constraints**: 
+- `(course_id, student_id)` — one enrollment per student per course.
+- `(course_id, waitlist_position) WHERE waitlist_position IS NOT NULL` — no duplicate positions in waitlist.
+
+**FIFO rule**: `waitlist_position` assigned as `MAX(waitlist_position) + 1` for the course at time of waitlist entry; decremented when head-of-queue student is enrolled.
 **Auto-enrollment trigger**: when an enrolled student unenrolls, the service promotes the lowest `waitlist_position` student to `enrolled`.
 
 ---
@@ -274,7 +281,8 @@ Records a student's PASS/FAIL result and instructor notes for a specific lesson.
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
-**Unique constraint**: `(course_lesson_id, student_id)`.  
+**Unique constraint**: `(course_lesson_id, student_id)`.
+**Note**: While `is_immutable` is managed at application layer, consider PostgreSQL triggers to enforce `BEFORE UPDATE` rejection when `is_immutable = true`.  
 **Visibility rule**: `feedback_notes` visible to student only when `course_lesson.status = 'completed'`.  
 **Immutability rule**: `is_immutable = true` after lesson completion; all update attempts rejected with HTTP 409.  
 **Email trigger**: when `feedback_notes` is saved (not null, not blank), email notification queued to student.

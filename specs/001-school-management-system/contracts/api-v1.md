@@ -141,13 +141,36 @@ Assigns a role to an existing user within the school.
 ### `GET /api/v1/syllabuses`
 
 **Roles**: all authenticated  
-Returns active syllabuses.
+Returns active final syllabuses visible to the user (system-wide + school-specific for their school).
 
 **Query params**: `discipline`, `page`, `page_size`
 
+**Response 200**:
+```json
+{
+  "request_id": "uuid",
+  "data": [
+    {
+      "id": "uuid",
+      "school_id": null,
+      "title": "P2 Ground School",
+      "status": "final",
+      "version": 1,
+      "description": "...",
+      "discipline": "paragliding_hangliding",
+      "created_at": "2026-02-24T...",
+      "lessons": [ ... ]
+    }
+  ],
+  "meta": { "total": 5, "page": 1, "page_size": 20 }
+}
+```
+
 ### `POST /api/v1/syllabuses`
 
-**Roles**: super_admin
+**Roles**: super_admin, school_admin
+
+Creates a new **Draft** syllabus. Super-admins create system-wide drafts (`school_id=null`); school-admins create school-specific drafts.
 
 **Request body**:
 ```json
@@ -161,27 +184,69 @@ Returns active syllabuses.
       "description": "...",
       "duration_hours": 2.0,
       "sequence_order": 1,
-      "learning_objectives": ["Identify glider components", "Inspect harness"]
+      "learning_objectives": ["Identify glider components"]
     }
   ]
 }
 ```
 
-**Response 201**: syllabus with embedded lessons.
+**Response 201**: draft syllabus with `status = 'draft'`, `version = null`.
 
 ### `GET /api/v1/syllabuses/{syllabus_id}`
 
-**Roles**: all authenticated
+**Roles**: all authenticated (if visible to school), super_admin (if system-wide)
+
+Returns both draft and final syllabuses the user can access.
 
 ### `PUT /api/v1/syllabuses/{syllabus_id}`
 
-**Roles**: super_admin  
-Full replacement; increments `version`.
+**Roles**: super_admin (system-wide), school_admin (own school syllabuses)
+
+Updates a **Draft** syllabus. Cannot modify final syllabuses directly.
+
+**Request body**: any updatable fields (title, description, lessons array, etc.)
+
+**Response 200**: updated draft syllabus.  
+**Response 409**: if attempting to edit a final syllabus (must finalize draft instead).
+
+### `POST /api/v1/syllabuses/{syllabus_id}/finalize`
+
+**Roles**: super_admin (system-wide), school_admin (own school)
+
+Finalizes a **Draft** syllabus, making it immutable and assigning a version number. Once finalized, editing it creates a new draft as a child.
+
+**Request body**: `{}` (no params needed)
+
+**Response 200**:
+```json
+{
+  "request_id": "uuid",
+  "data": {
+    "id": "uuid",
+    "status": "final",
+    "version": 1,
+    "title": "P2 Ground School",
+    ...
+  }
+}
+```
+
+**Response 409**: if syllabus is already final.
+
+### `POST /api/v1/syllabuses/{syllabus_id}/copy`
+
+**Roles**: school_admin (for copying system-wide final syllabuses into their school)
+
+Creates a new **Draft** as a copy of a system-wide final syllabus for the school.
+
+**Request body**: `{}`
+
+**Response 201**: new school-specific draft with `parent_syllabus_id = {original_id}`.
 
 ### `DELETE /api/v1/syllabuses/{syllabus_id}`
 
-**Roles**: super_admin  
-Soft-delete (`is_active = false`).
+**Roles**: super_admin, school_admin (own school)  
+Soft-delete (`is_active = false`). Works on both draft and final syllabuses.
 
 ---
 
@@ -197,10 +262,12 @@ Soft-delete (`is_active = false`).
 
 **Roles**: super_admin, school_admin
 
+Creates a course from a **final** syllabus. The `syllabus_id` must reference a final (immutable) syllabus. The syllabus version is determined by the referenced syllabus row's `version` field.
+
 **Request body**:
 ```json
 {
-  "syllabus_id": "uuid",
+  "syllabus_id": "uuid",           // must be a final syllabus (status='final')
   "title": "Spring P2 Course 2026",
   "description": "...",
   "max_students": 15,
@@ -209,10 +276,11 @@ Soft-delete (`is_active = false`).
 }
 ```
 
-If `customize: true`, caller MUST provide `lessons` array (overrides syllabus lessons).  
-If `customize: false`, lessons are copied from the syllabus automatically.
+If `customize: true`, caller MUST provide `lessons` array (overrides the syllabus's lessons for this course only).  
+If `customize: false`, lessons are copied from the specified syllabus automatically.
 
-**Response 201**: course with embedded `course_lessons`.
+**Response 201**: course with embedded `course_lessons`, bound immutably to the final syllabus.  
+**Response 409**: if `syllabus_id` references a draft (must be final) or if the syllabus is inactive.
 
 ### `GET /api/v1/schools/{school_id}/courses/{course_id}`
 
