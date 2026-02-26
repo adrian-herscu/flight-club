@@ -38,13 +38,14 @@ Represents a tenant and a legal entity (business/organization). All school-scope
 | `address_city` | `VARCHAR(100)` | NOT NULL | City/municipality |
 | `address_region` | `VARCHAR(100)` | NULLABLE | State/province/region (if applicable) |
 | `address_country` | `VARCHAR(2)` | NOT NULL | ISO 3166-1 alpha-2 country code (e.g., "AU", "US", "CH") |
+| `default_currency` | `VARCHAR(3)` | NOT NULL | ISO 4217 currency code (e.g., "EUR", "USD", "ILS"); can differ from `address_country` default (e.g., EUR vs local currency) |
 | `address_postal_code` | `VARCHAR(20)` | NOT NULL | Postal/zip code |
 | `settings` | `JSONB` | NOT NULL, default `{}` | Extensible config (max capacity defaults, notification prefs, etc.) |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
 **Ownership**: super-admin creates/manages schools.  
-**Validation**: `slug` matches `[a-z0-9-]+`, unique globally. `company_id` and `email` are unique globally.
+**Validation**: `slug` matches `[a-z0-9-]+`, unique globally. `company_id` and `email` are unique globally. `default_currency` must be a valid ISO 4217 code; on creation it is suggested from `address_country`, but may be overridden by admin.
 
 ---
 
@@ -178,6 +179,9 @@ An instance of a school-specific or school-owned syllabus taught at a specific s
 | `syllabus_id` | `UUID` | FK → `syllabus.id`, NOT NULL | Must reference a final syllabus (status='final'). Course is immutably bound to this specific syllabus version. |
 | `title` | `VARCHAR(255)` | NOT NULL | May differ from syllabus title |
 | `description` | `TEXT` | NULLABLE | |
+| `price_amount` | `NUMERIC(10,2)` | NULLABLE, CHECK `>= 0` | Manual list price for the course; informational only (payments handled externally) |
+| `price_currency` | `VARCHAR(3)` | NULLABLE | ISO 4217 currency code; must match `school.default_currency` when `price_amount` is set |
+| `price_notes` | `TEXT` | NULLABLE | Optional pricing notes (e.g., deposit rules, what’s included) |
 | `status` | `ENUM('upcoming','in_progress','completed','cancelled')` | NOT NULL, default `'upcoming'` | |
 | `max_students` | `INTEGER` | NULLABLE, CHECK `> 0` | NULL = unlimited |
 | `created_by` | `UUID` | FK → `user.id`, NOT NULL | School admin who created it |
@@ -187,6 +191,7 @@ An instance of a school-specific or school-owned syllabus taught at a specific s
 **Business rule**: `status` transitions `upcoming → in_progress → completed`; `cancelled` can be set from any state.  
 **Derived**: `status` updated to `in_progress` when first `CourseLesson` is marked `completed`; to `completed` when all `CourseLesson` rows are `completed`.  
 **Lesson copying**: When course is created, all Lesson rows from the referenced final syllabus are copied into CourseLesson rows. The course remains bound to that immutable syllabus version via `syllabus_id` FK. If a new final version is later created (by editing and finalizing), existing courses are unaffected.
+**Manual pricing rule**: if `price_amount` is set, `price_currency` is required and must match `school.default_currency`. Payments are handled externally and tracked per student via `StudentEnrollment.payment_id` and `payment_status`.
 
 ---
 
@@ -358,3 +363,4 @@ any ─────────────────────────�
 | `CourseLesson` | `duration_hours > 0` | DB CHECK constraint |
 | `Lesson` | `duration_hours > 0` | DB CHECK constraint |
 | `Course` | `max_students > 0` if set | DB CHECK constraint |
+| `Course` | `price_currency` must match `School.default_currency` when `price_amount` is set | Service layer |
