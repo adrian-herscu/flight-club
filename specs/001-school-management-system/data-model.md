@@ -289,6 +289,14 @@ Records a student's PASS/FAIL result and instructor notes for a specific lesson.
 
 ---
 
+### Weather Consideration
+
+Not scheduled for the first release.
+
+Integrate a simple weather check during lesson scheduling. Instead of a separate table, use an external API to fetch weather data directly when scheduling a lesson. If the weather conditions are unsuitable, the system will prevent scheduling and notify the instructor. This approach reduces complexity by avoiding additional database tables and focuses on real-time weather data retrieval.
+
+---
+
 ## State Transition Diagrams
 
 ### `StudentEnrollment.status`

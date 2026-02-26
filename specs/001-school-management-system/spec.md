@@ -18,6 +18,8 @@
 ### Session 26 February 2026
 
 - Q: Syllabus Versioning and Draft/Final States → A: Syllabuses use a draft/final state model combined with versioning. When a syllabus is created, it starts in **Draft** state. Edits to a draft do NOT create new versions—the draft is freely editable. When a draft is finalized, it becomes a **Final** version (immutable). Editing a final version automatically creates a new **Draft** as its child; each final version has at most one active draft. Courses can ONLY bind to final (versioned) syllabuses—they bind immutably to a specific final version for the life of the course. When a school admin creates a course, the system suggests the latest final version as default, but admins can choose any previous final version. Visibility: school admins see the latest final versions of (their school's own syllabuses + system admin syllabuses). School-defined syllabuses are exclusive to their school and never visible to other schools. System syllabuses are visible to all schools.
+- Q: Course Opening and Lesson Scheduling Workflow → A: School admin opens a course and assigns instructor(s). Students can enroll in the course. Once enrolled, an instructor sets lessons for specific site/date combinations. The system manages scheduling and conflict detection based on the defined parameters.
+
 ---
 
 ## User Scenarios & Testing
