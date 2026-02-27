@@ -1,14 +1,17 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.3.0 → 1.4.0
+Version change: 1.4.0 → 1.4.1
 Modified principles: none
 Added guidance:
-  - Development Workflow: "Database & Data Migrations" entry expanded from a
-    single bullet into a full policy covering schema migrations, data migrations,
-    backfills, idempotency, batching, seed data, and tenant CSV onboarding.
-  - .github/copilot/copilot-instructions.md ✅ — data migration rules added to
-    Python/FastAPI section.
+  - NEW Principle V: "Test Infrastructure & Development Methodology" — ERROR vs
+    FAILURE doctrine, fixture architecture (dedicated clients + factories), fixture
+    dependency graphs, static analysis before dynamic testing (Pylance first),
+    model truth principle, TDD phases with success criteria.
+  - Development Workflow: added step 2 (Pylance check) to local development cycle.
+  - Principles V–VII renumbered (Cloud Deployment now VI, Technology Stack now VII).
+  - .github/copilot/copilot-instructions.md ✅ — test infrastructure guidance
+    added to Python/FastAPI section.
 Removed: N/A
 Templates checked:
   - .specify/templates/plan-template.md ✅ — no structural change needed
@@ -119,7 +122,128 @@ data). Security controls are mandatory, not optional.
 credential storage risk, and custom token rotation logic. Stateless JWTs keep
 the backend horizontally scalable from day 1 with zero session-store infrastructure.
 
-### V. Cost-Conscious Cloud Deployment
+### V. Test Infrastructure & Development Methodology
+
+Test failures have two orthogonal classes with fundamentally different meanings.
+Confusing them causes wasted debugging time and false confidence in incorrect code.
+
+**ERROR (Test Infrastructure Broken)**
+- Cause: missing fixtures, import errors, type mismatches, conflicting mocks
+- Impact: blocks all progress on that test file
+- Resolution: fix before running any implementation code
+- Example: `ModuleNotFoundError: No module named 'backend'` or `TypeError: 'school_id' unexpected`
+- Gate: **ZERO ERROR tests allowed before implementation phase begins**
+
+**FAILURE (Missing Implementation)**
+- Cause: endpoint not implemented, business logic missing, assertion on unimplemented feature
+- Impact: test runs, code executes, result doesn't match expectation
+- Resolution: implement the missing feature
+- Example: `AssertionError: 422 != 201` (endpoint returns Unprocessable Entity instead of created)
+- Gate: FAILURE tests are **expected** and drive development; TDD promises them
+
+**Fixture Architecture**: FastAPI's `app.dependency_overrides` is a global singleton,
+not request-scoped. Multiple concurrent fixtures overwriting the same override cause
+conflicts. Solution: two-tier fixture design.
+
+*Tier 1 — Dedicated client fixtures* for single-user tests (90% of cases):
+```python
+@pytest_asyncio.fixture
+async def admin_client(db: AsyncSession, admin_user: User) -> AsyncGenerator[AsyncClient, None]:
+    async def override_get_db():
+        yield db
+    async def override_get_current_user() -> User:
+        return admin_user
+    
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+    
+    app.dependency_overrides.clear()
+```
+
+*Tier 2 — Factory fixtures* with async context managers for multi-user workflows:
+```python
+@pytest_asyncio.fixture
+async def client_factory(db: AsyncSession) -> Callable:
+    async def create_client(user: User) -> AsyncGenerator[AsyncClient, None]:
+        async def override_get_current_user() -> User:
+            return user
+        
+        app.dependency_overrides[get_current_user] = override_get_current_user
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            yield ac
+        app.dependency_overrides.clear()
+    
+    return create_client
+
+# Usage in test:
+async with client_factory(admin_user) as admin_client:
+    response = await admin_client.post(...)
+async with client_factory(student_user) as student_client:
+    response = await student_client.post(...)
+```
+
+**Fixture Dependency Graph**: Design fixtures explicitly with clear ownership.
+Example for multi-tenant tests:
+```
+db (session)
+├── test_school (school 1)
+│   ├── admin_user → admin_client
+│   ├── student_user → student_client
+│   └── test_course
+├── school_b (school 2)
+│   ├── school_b_admin → school_b_admin_client
+│   ├── school_b_student → school_b_student_client
+│   └── school_b_course
+├── super_admin_user (no school) → super_admin_client
+└── test_syllabus (global)
+```
+
+**Model Truth Principle**: Tests are subordinate to the data model, not vice versa.
+- All assertions about structure (columns, relationships, type constraints) MUST
+  reflect the actual models in `src/models/`.
+- When a test assumes a field name or type that doesn't exist, the test is wrong,
+  not the model.
+- Example: if `Course.name` exists but test uses `Course.title`, the test MUST
+  be fixed immediately.
+
+**Static Analysis Before Dynamic Testing**: Pylance/Pyright catch structural errors
+(imports, types, unexpected attributes) in 0.1s; pytest takes 1.6s and obscures
+the root cause in a runtime stack trace.
+
+Workflow:
+1. Edit files
+2. Run `pylance check src/ tests/` (0.1s) — catches import errors, type mismatches, invalid kwargs
+3. Fix all reported issues
+4. Run `pytest tests/` (1.6s) — verifies behavior and integration
+5. Commit
+
+Skipping step 2 guarantees multiple pytest iterations per issue.
+
+**TDD Phases** (strictly sequential):
+- **Phase 1**: Contracts written; tests exist in `tests/contract/` with failing assertions
+- **Phase 2**: Test infrastructure to 0 ERRORs; all fixtures created and valid
+- **Phase 3**: Implement features until tests pass
+- **Phase 4**: Refactor and polish
+
+Success criterion for each phase:
+- Phase 1: Contracts reviewed and approved
+- Phase 2: **Zero ERROR tests**; FAILURE tests expected
+- Phase 3: Failing tests become passing as endpoints are implemented
+- Phase 4: Refactoring doesn't introduce new FIALUREs
+
+Do **not** skip Phase 2. Do **not** mix Phase 2 and Phase 3. Do **not** run tests
+without Pylance check first.
+
+**Rationale**: Test infrastructure failures and implementation failures require
+different debugging mindsets. Confusing them leads to chasing phantom bugs in test
+code while the real issue (fixture conflict or import typo) remains hidden.
+Stateless fixture designs with explicit dependency graphs prevent conflicts entirely.
+Static analysis saves 85% of iteration cycles on structural issues.
+
+### VI. Cost-Conscious Cloud Deployment
 
 Infrastructure choices MUST maximise value for money. Managed complexity is
 acceptable only when it replaces disproportionate operational burden.
@@ -283,6 +407,15 @@ docs/       # ADRs, data-model diagrams, API changelog
   `###-short-description` (e.g. `001-member-registration`).
 - **Pull requests**: MUST reference a spec (`specs/###-*/spec.md`).
   MUST include a filled Constitution Check section in the linked plan.
+- **Local development cycle**:
+  1. Edit Python/TypeScript files
+  2. Run `pylance check src/ tests/` (static analysis, 0.1s)
+  3. Fix all reported import errors, type mismatches, unexpected attributes
+  4. Run `pytest tests/` or `npm test` (dynamic testing, 1.6–10s)
+  5. Fix failing tests by implementing features (Phase 3) or fixtures (Phase 2)
+  6. Commit once all checks pass
+  
+  Skipping step 2 guarantees multiple pytest iterations on the same structural issue.
 - **CI gates** (ALL MUST pass before merge):
   1. `make lint` — ruff + mypy (backend), ESLint (frontend).
   2. `make test` — pytest coverage ≥ 80%, Playwright smoke suite.
@@ -338,4 +471,4 @@ that introduces the conflict.
   be recorded in the plan's "Complexity Tracking" section with measurable
   justification.
 
-**Version**: 1.4.0 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-24
+**Version**: 1.4.1 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-27
