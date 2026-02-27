@@ -1,7 +1,7 @@
-import { getAuthToken } from './supabaseClient';
-import type { ApiResponse } from './types';
+import { getAuthToken, hasSupabaseConfig } from "./supabaseClient";
+import type { ApiResponse } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export class ApiError extends Error {
   constructor(
@@ -9,26 +9,31 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public details?: Record<string, unknown>,
-    public requestId?: string
+    public requestId?: string,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const token = await getAuthToken();
-  
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  // Only get Supabase token if configured, otherwise use dev token from cookie
+  const token = hasSupabaseConfig
+    ? await getAuthToken()
+    : typeof document !== "undefined"
+      ? document.cookie
+          .split("; ")
+          .find((c) => c.startsWith("sb-access-token="))
+          ?.split("=")[1]
+      : null;
+
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...options.headers,
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -36,28 +41,28 @@ async function request<T>(
     headers,
   });
 
-  const requestId = response.headers.get('X-Request-ID') || undefined;
+  const requestId = response.headers.get("X-Request-ID") || undefined;
 
   if (!response.ok) {
     const errorData: ApiResponse = await response.json();
     throw new ApiError(
-      errorData.error?.code || 'UNKNOWN_ERROR',
-      errorData.error?.message || 'An unexpected error occurred',
+      errorData.error?.code || "UNKNOWN_ERROR",
+      errorData.error?.message || "An unexpected error occurred",
       response.status,
       errorData.error?.details,
-      requestId
+      requestId,
     );
   }
 
   const data: ApiResponse<T> = await response.json();
-  
+
   if (!data.success) {
     throw new ApiError(
-      data.error?.code || 'UNKNOWN_ERROR',
-      data.error?.message || 'An unexpected error occurred',
+      data.error?.code || "UNKNOWN_ERROR",
+      data.error?.message || "An unexpected error occurred",
       response.status,
       data.error?.details,
-      requestId
+      requestId,
     );
   }
 
@@ -65,30 +70,29 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string, options?: RequestInit) => 
-    request<T>(path, { ...options, method: 'GET' }),
-  
+  get: <T>(path: string, options?: RequestInit) => request<T>(path, { ...options, method: "GET" }),
+
   post: <T>(path: string, body?: unknown, options?: RequestInit) =>
-    request<T>(path, { 
-      ...options, 
-      method: 'POST',
+    request<T>(path, {
+      ...options,
+      method: "POST",
       body: body ? JSON.stringify(body) : undefined,
     }),
-  
+
   put: <T>(path: string, body?: unknown, options?: RequestInit) =>
-    request<T>(path, { 
-      ...options, 
-      method: 'PUT',
+    request<T>(path, {
+      ...options,
+      method: "PUT",
       body: body ? JSON.stringify(body) : undefined,
     }),
-  
+
   patch: <T>(path: string, body?: unknown, options?: RequestInit) =>
-    request<T>(path, { 
-      ...options, 
-      method: 'PATCH',
+    request<T>(path, {
+      ...options,
+      method: "PATCH",
       body: body ? JSON.stringify(body) : undefined,
     }),
-  
+
   delete: <T>(path: string, options?: RequestInit) =>
-    request<T>(path, { ...options, method: 'DELETE' }),
+    request<T>(path, { ...options, method: "DELETE" }),
 };

@@ -1,14 +1,20 @@
+from __future__ import annotations
+
 import enum
 from datetime import datetime
-from typing import Optional, List
-from sqlalchemy import String, Text, Integer, DateTime, Enum, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING, List, Optional
 
+from sqlalchemy import DateTime, Enum, Integer, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base import Base
+
+if TYPE_CHECKING:
+    from src.models.lesson import Lesson
 
 
 class SyllabusStatus(str, enum.Enum):
     """Syllabus status types."""
+
     DRAFT = "draft"
     FINAL = "final"
 
@@ -16,13 +22,14 @@ class SyllabusStatus(str, enum.Enum):
 class Syllabus(Base):
     """
     Syllabus template for courses.
-    
+
     Super-admins create reusable syllabuses with ordered lessons.
     - Draft: Editable, only visible to super-admins
     - Final: Immutable, visible to all admins for course creation
-    
+
     Versioning: When a final syllabus needs changes, create a new draft version.
     """
+
     __tablename__ = "syllabuses"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -32,20 +39,26 @@ class Syllabus(Base):
         Enum(SyllabusStatus), nullable=False, default=SyllabusStatus.DRAFT
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
     finalized_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # Relationships
-    lessons: Mapped[List["Lesson"]] = relationship(
-        "Lesson", back_populates="syllabus", cascade="all, delete-orphan", order_by="Lesson.order"
+    lessons: Mapped[List[Lesson]] = relationship(
+        "Lesson",
+        back_populates="syllabus",
+        cascade="all, delete-orphan",
+        order_by="Lesson.order",
     )
 
     def __repr__(self) -> str:

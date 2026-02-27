@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiClient } from '@/services/apiClient';
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { apiClient } from "@/services/apiClient";
 
 interface School {
   id: number;
@@ -25,15 +25,15 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadSchools = async () => {
       try {
-        const data = await apiClient.get<{ items: School[] }>('/api/v1/schools');
-        setSchools(data.items);
-        
+        const data = await apiClient.get<School[]>("/api/v1/schools");
+        setSchools(data);
+
         // Set first school as default
-        if (data.items.length > 0) {
-          setCurrentSchool(data.items[0]);
+        if (data.length > 0) {
+          setCurrentSchool(data[0]);
         }
       } catch (error) {
-        console.error('Failed to load schools:', error);
+        console.error("Failed to load schools:", error);
       } finally {
         setLoading(false);
       }
@@ -52,7 +52,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
 export function useSchool() {
   const context = useContext(SchoolContext);
   if (context === undefined) {
-    throw new Error('useSchool must be used within a SchoolProvider');
+    throw new Error("useSchool must be used within a SchoolProvider");
   }
   return context;
 }

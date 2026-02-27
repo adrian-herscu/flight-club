@@ -3,6 +3,8 @@ node_modules/
 dist/
 build/
 *.log
+.next/
+out/
 
 # Python
 __pycache__/
@@ -10,9 +12,22 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+*.pyo
+*.pyd
+.Python
 
-# Env files
-.env*
+# Environment files (keep .env.example for documentation)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
 # OS / editor
 .DS_Store
@@ -21,3 +36,16 @@ Thumbs.db
 *.swp
 .vscode/
 .idea/
+
+# Testing
+coverage/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+*.pyc
+*.pyo
+*.so
+*.dll
+*.dylib

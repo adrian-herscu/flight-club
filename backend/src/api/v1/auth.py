@@ -1,10 +1,11 @@
 """
 Authentication endpoints.
 """
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.core.auth import get_current_user
+from src.core.config import settings
 from src.core.db import get_db
 from src.core.responses import success_response
 from src.models.user import User
@@ -22,13 +23,16 @@ async def get_me(
 ) -> dict:
     """
     Get current authenticated user profile.
-    
+
     Returns:
         User profile with roles
     """
-    # Get user roles
-    roles = await get_user_role_types(db, current_user.id)
-    
+    # Get user roles (in dev mode, return empty list to avoid database queries)
+    if settings.dev_mode:
+        roles = []
+    else:
+        roles = await get_user_role_types(db, current_user.id)
+
     # Build response data
     user_data = UserMe(
         id=current_user.id,
@@ -36,7 +40,7 @@ async def get_me(
         name=current_user.name,
         roles=roles,
     )
-    
+
     return success_response(
         data=user_data.model_dump(),
         request_id=request.state.request_id,
