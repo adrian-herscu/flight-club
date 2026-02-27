@@ -13,10 +13,11 @@ from src.core.db import get_db
 from src.models.user import User
 from src.services.auth_service import sync_user_from_token
 
-security = HTTPBearer()
-
 # Dev mode flag - allow authentication bypass for local development
 DEV_MODE = settings.dev_mode if hasattr(settings, "dev_mode") else False
+
+# Use auto_error=False in dev mode to allow requests without auth header
+security = HTTPBearer(auto_error=not DEV_MODE)
 
 
 async def verify_jwt_token(token: str) -> dict:
@@ -53,7 +54,7 @@ async def verify_jwt_token(token: str) -> dict:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
@@ -63,26 +64,42 @@ async def get_current_user(
     In dev mode, returns a mock user.
 
     Args:
-        credentials: HTTP bearer credentials
+        credentials: HTTP bearer credentials (optional in dev mode)
         db: Database session
 
     Returns:
         Current user
 
     Raises:
-        HTTPException: If authentication fails
+        HTTPException: If authentication fails (except in dev mode)
     """
-    # Dev mode: return a mock user for testing
+    # Dev mode: return a mock user even without credentials
     if DEV_MODE:
-        # Create a simple object that mimics User
+        from datetime import datetime
+
+        # Create a simple object that mimics User model
         class DevUser:
             id = 1
             email = "dev@local.test"
             name = "Dev User"
             auth_provider = "dev"
             auth_provider_id = "dev-provider"
+            created_at = datetime.now()
+            updated_at = datetime.now()
+
+            # Relationships (for compatibility)
+            enrollments = []
+            lesson_evaluations = []
+            instructor_assignments = []
 
         return DevUser()
+
+    # Production mode: require credentials
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
 
     token = credentials.credentials
     payload = await verify_jwt_token(token)

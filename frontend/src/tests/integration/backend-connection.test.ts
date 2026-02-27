@@ -31,22 +31,29 @@ describe("Frontend-Backend Integration", () => {
   });
 
   it("should handle unauthenticated requests to /api/v1/me", async () => {
-    // This is what the homepage does - tries to fetch user info without auth
-    // The app shows "Error: An unexpected error occurred" because of this
+    // In dev mode: backend returns 200 with dev user
+    // In production: backend returns 401 with error
 
     const response = await fetch(`${API_BASE_URL}/api/v1/me`);
-
-    // Should return 401 Unauthorized (not crash)
-    expect(response.status).toBe(401);
-
     const data = await response.json();
 
-    // Should have error structure
-    expect(data).toHaveProperty("success");
-    expect(data.success).toBe(false);
-    expect(data).toHaveProperty("error");
-    expect(data.error).toHaveProperty("code");
-    expect(data.error).toHaveProperty("message");
+    if (response.status === 200) {
+      // Dev mode: should return dev user
+      expect(data).toHaveProperty("success");
+      expect(data.success).toBe(true);
+      expect(data.data).toHaveProperty("email");
+      expect(data.data.email).toBe("dev@local.test");
+    } else if (response.status === 401) {
+      // Production mode: should return standardized error
+      expect(data).toHaveProperty("success");
+      expect(data.success).toBe(false);
+      expect(data).toHaveProperty("error");
+      expect(data.error).toHaveProperty("code");
+      expect(data.error).toHaveProperty("message");
+    } else {
+      // Unexpected status
+      throw new Error(`Unexpected status code: ${response.status}`);
+    }
   });
 
   it("should have NEXT_PUBLIC_API_URL environment variable set", () => {
@@ -109,23 +116,30 @@ describe("Frontend-Backend Integration", () => {
     }
   });
 
-  it("should show user-friendly error when not authenticated (not 'An unexpected error occurred')", async () => {
-    // This test ensures the frontend shows a helpful message instead of generic error
-    // The issue from the screenshot was caused by backend returning FastAPI's default
-    // error format instead of our standardized API format
+  it("should show user-friendly error or dev user info when accessing /api/v1/me", async () => {
+    // This test ensures proper error handling for authentication
+    // Dev mode: Returns dev user (200 OK)
+    // Production mode: Returns friendly error (401 with AUTHENTICATION_REQUIRED code)
 
     const response = await fetch(`${API_BASE_URL}/api/v1/me`);
-    expect(response.status).toBe(401);
-
     const data = await response.json();
 
-    // Backend must return standardized error format
-    expect(data).toHaveProperty("success");
-    expect(data.success).toBe(false);
-    expect(data.error.code).toBe("AUTHENTICATION_REQUIRED");
+    if (response.status === 200) {
+      // Dev mode: should have user data
+      expect(data.success).toBe(true);
+      expect(data.data).toHaveProperty("email");
+      expect(data.data).toHaveProperty("name");
+      expect(data.data).toHaveProperty("roles");
+    } else if (response.status === 401) {
+      // Production mode: should have friendly error
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe("AUTHENTICATION_REQUIRED");
 
-    // The error message should be clear, not generic
-    expect(data.error.message).not.toBe("An unexpected error occurred");
-    expect(data.error.message).toBeTruthy();
+      // The error message should be clear, not generic
+      expect(data.error.message).not.toBe("An unexpected error occurred");
+      expect(data.error.message).toBeTruthy();
+    } else {
+      throw new Error(`Unexpected status: ${response.status}`);
+    }
   });
 });
