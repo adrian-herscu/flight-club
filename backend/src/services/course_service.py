@@ -111,7 +111,7 @@ async def create_course(
                 message=f"Syllabus {course_data.syllabus_id} not found",
                 status_code=404,
             )
-    
+
     # Set default dates if not provided
     start_date = course_data.start_date or datetime.utcnow()
     end_date = course_data.end_date or (datetime.utcnow() + timedelta(days=30))

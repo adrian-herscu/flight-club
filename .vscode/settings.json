@@ -64,6 +64,11 @@
     // File associations
     "files.associations": {
         "**/tests/**/*.py": "python"
-    }
+    },
+    // Vitest configuration for frontend tests
+    "vitest.enable": true,
+    "vitest.commandLine": "npm run test:watch",
+    "vitest.rootConfig": "./frontend/vitest.config.ts",
+    "testing.automaticallyOpenPeekView": "failureInVisibleDocument"
 }
 

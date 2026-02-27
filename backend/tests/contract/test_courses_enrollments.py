@@ -43,7 +43,9 @@ async def test_course_creation_requires_admin_or_super_admin(
 
 
 @pytest.mark.asyncio
-async def test_course_creation_success(admin_client: AsyncClient, test_syllabus: Syllabus):
+async def test_course_creation_success(
+    admin_client: AsyncClient, test_syllabus: Syllabus
+):
     """Admin can create a course successfully."""
     course_data = {
         "name": "Intermediate Hangliding",

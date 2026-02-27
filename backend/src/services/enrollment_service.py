@@ -106,9 +106,7 @@ async def request_enrollment(
 
     if not course:
         raise APIError(
-            code="COURSE_NOT_FOUND",
-            status_code=404, 
-            message="Course not found"
+            code="COURSE_NOT_FOUND", status_code=404, message="Course not found"
         )
 
     # Check if student already has active enrollment
