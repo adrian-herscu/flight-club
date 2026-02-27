@@ -22,9 +22,7 @@ class EnrollmentStatus(str, Enum):
 class StudentEnrollmentCreate(BaseModel):
     """Create new student enrollment request."""
 
-    student_id: int = Field(..., description="Student ID (from auth context)")
     course_id: int = Field(..., description="Course ID to enroll in")
-    school_id: int = Field(..., description="School ID (from auth context)")
 
 
 class StudentEnrollmentApprove(BaseModel):

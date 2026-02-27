@@ -80,7 +80,7 @@ async def request_enrollment(
     db: AsyncSession,
     school_id: int,
     student_id: int,
-    enrollment_data: StudentEnrollmentCreate,
+    course_id: int,
 ) -> StudentEnrollment:
     """
     Request enrollment in a course.
@@ -89,7 +89,7 @@ async def request_enrollment(
         db: Database session
         school_id: School ID (from auth context)
         student_id: Student ID (from auth context)
-        enrollment_data: Enrollment request data
+        course_id: Course ID to enroll in
 
     Returns:
         Created StudentEnrollment with status PENDING_APPROVAL
@@ -97,31 +97,25 @@ async def request_enrollment(
     Raises:
         APIError: If validation fails
     """
-    # Verify consistency
-    if (
-        enrollment_data.student_id != student_id
-        or enrollment_data.school_id != school_id
-    ):
-        raise APIError(
-            status_code=403,
-            message="Cannot request enrollment for different student or school",
-        )
-
     # Check course exists and belongs to school
     course_query = select(Course).where(
-        and_(Course.id == enrollment_data.course_id, Course.school_id == school_id)
+        and_(Course.id == course_id, Course.school_id == school_id)
     )
     course_result = await db.execute(course_query)
     course = course_result.scalar_one_or_none()
 
     if not course:
-        raise APIError(status_code=404, message="Course not found")
+        raise APIError(
+            code="COURSE_NOT_FOUND",
+            status_code=404, 
+            message="Course not found"
+        )
 
     # Check if student already has active enrollment
     existing_query = select(StudentEnrollment).where(
         and_(
             StudentEnrollment.student_id == student_id,
-            StudentEnrollment.course_id == enrollment_data.course_id,
+            StudentEnrollment.course_id == course_id,
             StudentEnrollment.status.in_(
                 [
                     EnrollmentStatus.ENROLLED,
@@ -140,7 +134,7 @@ async def request_enrollment(
 
     enrollment = StudentEnrollment(
         student_id=student_id,
-        course_id=enrollment_data.course_id,
+        course_id=course_id,
         school_id=school_id,
         status=EnrollmentStatus.PENDING_APPROVAL,
     )

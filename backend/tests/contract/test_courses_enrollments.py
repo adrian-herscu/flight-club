@@ -84,12 +84,11 @@ async def test_course_requires_valid_syllabus(admin_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_student_enrollment_request(student_client: AsyncClient):
+async def test_student_enrollment_request(student_client: AsyncClient, test_course):
     """Student can request enrollment in a course."""
-    # Assuming course 1 exists
     response = await student_client.post(
         "/api/v1/enrollments",
-        json={"course_id": 1},
+        json={"course_id": test_course.id},
     )
 
     assert response.status_code == 201

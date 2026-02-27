@@ -21,7 +21,7 @@ from src.services.role_service import get_user_school_id, has_role
 router = APIRouter()
 
 
-@router.post("/enrollments")
+@router.post("/enrollments", status_code=status.HTTP_201_CREATED)
 async def request_enrollment(
     request: Request,
     enrollment_data: StudentEnrollmentCreate,
@@ -42,32 +42,17 @@ async def request_enrollment(
             detail="User not associated with a school",
         )
 
-    # Verify student_id matches current user
-    if enrollment_data.student_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot request enrollment for another student",
-        )
-
-    # Verify school_id matches
-    if enrollment_data.school_id != school_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot request enrollment for different school",
-        )
-
     try:
         enrollment = await enrollment_service.request_enrollment(
             db=db,
             school_id=school_id,
             student_id=current_user.id,
-            enrollment_data=enrollment_data,
+            course_id=enrollment_data.course_id,
         )
         await db.commit()
 
         return success_response(
             data=StudentEnrollmentResponse.model_validate(enrollment),
-            status_code=status.HTTP_201_CREATED,
             request_id=request.state.request_id,
         )
 
