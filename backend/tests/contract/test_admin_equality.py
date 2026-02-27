@@ -10,7 +10,7 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_all_admins_have_equal_permissions(
-    client: AsyncClient, admin_auth_headers: dict
+    admin_client: AsyncClient
 ) -> None:
     """
     All admins should have identical permissions.
@@ -27,7 +27,7 @@ async def test_all_admins_have_equal_permissions(
     ]
     
     for endpoint in endpoints:
-        response = await client.get(endpoint, headers=admin_auth_headers)
+        response = await admin_client.get(endpoint)
         # Should not be forbidden (403) - either success or other status
         assert response.status_code != 403, (
             f"Admin cannot access {endpoint} - suggests hierarchical admin structure"
@@ -36,7 +36,7 @@ async def test_all_admins_have_equal_permissions(
 
 @pytest.mark.asyncio
 async def test_admin_cannot_modify_other_admin_roles(
-    client: AsyncClient, admin_auth_headers: dict
+    admin_client: AsyncClient
 ) -> None:
     """
     Admins should not be able to change other admins' roles.
@@ -44,9 +44,9 @@ async def test_admin_cannot_modify_other_admin_roles(
     This prevents one admin from elevating themselves or demoting others.
     """
     # Attempt to modify another user's role
-    response = await client.post(
+    response = await admin_client.post(
         "/api/v1/users/2/roles",
-        headers=admin_auth_headers,
+
         json={"role": "super_admin"},
     )
     

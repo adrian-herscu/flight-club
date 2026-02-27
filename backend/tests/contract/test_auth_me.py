@@ -9,9 +9,9 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_me_endpoint_requires_auth(client: AsyncClient) -> None:
+async def test_me_endpoint_requires_auth(admin_client: AsyncClient) -> None:
     """Unauthenticated request should return 401."""
-    response = await client.get("/api/v1/me")
+    response = await admin_client.get("/api/v1/me")
     assert response.status_code == 401
     data = response.json()
     assert data["success"] is False
@@ -20,10 +20,10 @@ async def test_me_endpoint_requires_auth(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_me_endpoint_returns_user_profile(
-    client: AsyncClient, auth_headers: dict
+    admin_client: AsyncClient, auth_headers: dict
 ) -> None:
     """Authenticated request should return user profile."""
-    response = await client.get("/api/v1/me", headers=auth_headers)
+    response = await admin_client.get("/api/v1/me", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
@@ -39,10 +39,10 @@ async def test_me_endpoint_returns_user_profile(
 
 @pytest.mark.asyncio
 async def test_me_endpoint_includes_request_id(
-    client: AsyncClient, auth_headers: dict
+    admin_client: AsyncClient, auth_headers: dict
 ) -> None:
     """Response should include X-Request-ID header."""
-    response = await client.get("/api/v1/me", headers=auth_headers)
+    response = await admin_client.get("/api/v1/me", headers=auth_headers)
     assert "X-Request-ID" in response.headers
     
     data = response.json()

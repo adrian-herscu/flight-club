@@ -135,19 +135,19 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 2 (FIRST - Must FAIL before implementation)
 
-- [ ] T038a [P] [US2] Write contract test for course creation and enrollment APIs in backend/tests/contract/test_courses_enrollments.py
-- [ ] T038b [P] [US2] Write integration test for course workflow (create, enroll, approve, assign instructor) in backend/tests/integration/test_course_workflows.py
-- [ ] T038c [P] [US2] Write integration test for overbooking conflict detection in backend/tests/integration/test_overbooking_prevention.py
+- [x] T038a [P] [US2] Write contract test for course creation and enrollment APIs in backend/tests/contract/test_courses_enrollments.py
+- [x] T038b [P] [US2] Write integration test for course workflow (create, enroll, approve, assign instructor) in backend/tests/integration/test_course_workflows.py
+- [x] T038c [P] [US2] Write integration test for overbooking conflict detection in backend/tests/integration/test_overbooking_prevention.py
 
 ### Implementation for User Story 2
 
-- [ ] T038 [P] [US2] Add Course/CourseLesson/StudentEnrollment/InstructorAssignment models+schemas in backend/src/models/course.py, backend/src/models/course_lesson.py, backend/src/models/student_enrollment.py, backend/src/models/instructor_assignment.py, backend/src/schemas/course.py, backend/src/schemas/enrollment.py
-- [ ] T039 [US2] Add migration for courses/lessons/enrollments/assignments in backend/alembic/versions/0003_create_courses_enrollments_assignments.py
-- [ ] T040 [US2] Implement course creation service in backend/src/services/course_service.py
-- [ ] T041 [US2] Implement enrollment workflow service in backend/src/services/enrollment_service.py
-- [ ] T042 [US2] Implement instructor assignment service in backend/src/services/instructor_service.py
-- [ ] T043 [US2] Implement courses API in backend/src/api/v1/courses.py and lessons API in backend/src/api/v1/course_lessons.py
-- [ ] T044 [US2] Implement enrollments API in backend/src/api/v1/enrollments.py and instructors API in backend/src/api/v1/instructors.py
+- [x] T038 [P] [US2] Add Course/CourseLesson/StudentEnrollment/InstructorAssignment models+schemas in backend/src/models/course.py, backend/src/models/course_lesson.py, backend/src/models/student_enrollment.py, backend/src/models/instructor_assignment.py, backend/src/schemas/course.py, backend/src/schemas/enrollment.py
+- [x] T039 [US2] Add migration for courses/lessons/enrollments/assignments in backend/alembic/versions/0003_create_courses_enrollments.py
+- [x] T040 [US2] Implement course creation service in backend/src/services/course_service.py
+- [x] T041 [US2] Implement enrollment workflow service in backend/src/services/enrollment_service.py
+- [x] T042 [US2] Implement instructor assignment service in backend/src/services/instructor_service.py
+- [x] T043 [US2] Implement courses API in backend/src/api/v1/courses.py and lessons API in backend/src/api/v1/course_lessons.py
+- [x] T044 [US2] Implement enrollments API in backend/src/api/v1/enrollments.py and instructors API in backend/src/api/v1/instructors.py
 - [ ] T045 [US2] Build admin course management UI in frontend/src/app/admin/courses/page.tsx and frontend/src/app/admin/courses/[courseId]/page.tsx
 - [ ] T046 [US2] Build enrollment approval UI in frontend/src/components/EnrollmentQueue.tsx
 - [ ] T047 [US2] Build instructor assignment UI in frontend/src/components/InstructorAssignmentForm.tsx

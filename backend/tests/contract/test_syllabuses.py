@@ -10,12 +10,12 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_create_syllabus_requires_super_admin(
-    client: AsyncClient, admin_auth_headers: dict
+    admin_client: AsyncClient
 ) -> None:
     """Only super-admin can create syllabuses."""
-    response = await client.post(
+    response = await admin_client.post(
         "/api/v1/syllabuses",
-        headers=admin_auth_headers,
+
         json={
             "title": "Introduction to Flight",
             "description": "Basic flight training course",
@@ -27,10 +27,10 @@ async def test_create_syllabus_requires_super_admin(
 
 @pytest.mark.asyncio
 async def test_create_syllabus_as_super_admin(
-    client: AsyncClient, super_admin_auth_headers: dict
+    super_admin_client: AsyncClient
 ) -> None:
     """Super-admin can create draft syllabuses."""
-    response = await client.post(
+    response = await admin_client.post(
         "/api/v1/syllabuses",
         headers=super_admin_auth_headers,
         json={
@@ -49,10 +49,10 @@ async def test_create_syllabus_as_super_admin(
 
 @pytest.mark.asyncio
 async def test_list_syllabuses_shows_only_final_to_admins(
-    client: AsyncClient, admin_auth_headers: dict
+    admin_client: AsyncClient
 ) -> None:
     """Admins should only see finalized syllabuses."""
-    response = await client.get("/api/v1/syllabuses", headers=admin_auth_headers)
+    response = await admin_client.get("/api/v1/syllabuses")
     assert response.status_code == 200
     data = response.json()
     
@@ -63,21 +63,21 @@ async def test_list_syllabuses_shows_only_final_to_admins(
 
 @pytest.mark.asyncio
 async def test_list_syllabuses_shows_all_to_super_admin(
-    client: AsyncClient, super_admin_auth_headers: dict
+    super_admin_client: AsyncClient
 ) -> None:
     """Super-admins should see both draft and final syllabuses."""
-    response = await client.get("/api/v1/syllabuses", headers=super_admin_auth_headers)
+    response = await admin_client.get("/api/v1/syllabuses")
     assert response.status_code == 200
     # Should contain syllabuses of any status
 
 
 @pytest.mark.asyncio
 async def test_finalize_syllabus_creates_new_version(
-    client: AsyncClient, super_admin_auth_headers: dict
+    super_admin_client: AsyncClient
 ) -> None:
     """Finalizing a syllabus should increment version and make it immutable."""
     # Create draft
-    create_response = await client.post(
+    create_response = await admin_client.post(
         "/api/v1/syllabuses",
         headers=super_admin_auth_headers,
         json={"title": "Test Course", "description": "Test", "status": "draft"}
@@ -85,7 +85,7 @@ async def test_finalize_syllabus_creates_new_version(
     syllabus_id = create_response.json()["data"]["id"]
     
     # Finalize it
-    finalize_response = await client.post(
+    finalize_response = await admin_client.post(
         f"/api/v1/syllabuses/{syllabus_id}/finalize",
         headers=super_admin_auth_headers
     )
@@ -94,7 +94,7 @@ async def test_finalize_syllabus_creates_new_version(
     assert data["data"]["status"] == "final"
     
     # Attempt to edit finalized syllabus should fail
-    edit_response = await client.patch(
+    edit_response = await admin_client.patch(
         f"/api/v1/syllabuses/{syllabus_id}",
         headers=super_admin_auth_headers,
         json={"title": "Modified Title"}
@@ -104,11 +104,11 @@ async def test_finalize_syllabus_creates_new_version(
 
 @pytest.mark.asyncio
 async def test_add_lessons_to_syllabus(
-    client: AsyncClient, super_admin_auth_headers: dict
+    super_admin_client: AsyncClient
 ) -> None:
     """Can add lessons to draft syllabus in order."""
     # Create syllabus
-    create_response = await client.post(
+    create_response = await admin_client.post(
         "/api/v1/syllabuses",
         headers=super_admin_auth_headers,
         json={"title": "Test Course", "description": "Test", "status": "draft"}
@@ -116,7 +116,7 @@ async def test_add_lessons_to_syllabus(
     syllabus_id = create_response.json()["data"]["id"]
     
     # Add lesson 1
-    lesson1_response = await client.post(
+    lesson1_response = await admin_client.post(
         f"/api/v1/syllabuses/{syllabus_id}/lessons",
         headers=super_admin_auth_headers,
         json={
@@ -128,7 +128,7 @@ async def test_add_lessons_to_syllabus(
     assert lesson1_response.status_code == 201
     
     # Add lesson 2
-    lesson2_response = await client.post(
+    lesson2_response = await admin_client.post(
         f"/api/v1/syllabuses/{syllabus_id}/lessons",
         headers=super_admin_auth_headers,
         json={
@@ -140,7 +140,7 @@ async def test_add_lessons_to_syllabus(
     assert lesson2_response.status_code == 201
     
     # Get syllabus with lessons
-    get_response = await client.get(
+    get_response = await admin_client.get(
         f"/api/v1/syllabuses/{syllabus_id}",
         headers=super_admin_auth_headers
     )
