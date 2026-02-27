@@ -19,6 +19,7 @@ from src.core.auth import get_current_user
 from src.core.db import get_db
 from src.main import app
 from src.models.base import Base
+from src.models.course import Course
 from src.models.school import School
 from src.models.syllabus import Syllabus
 from src.models.user import User
@@ -91,7 +92,6 @@ async def test_syllabus(db: AsyncSession, test_school: School) -> Syllabus:
     """Create a test syllabus."""
     syllabus = Syllabus(
         id=1,
-        school_id=test_school.id,
         title="Beginner Paragliding",
         description="Complete beginner course",
         status="final",
@@ -100,6 +100,27 @@ async def test_syllabus(db: AsyncSession, test_school: School) -> Syllabus:
     await db.commit()
     await db.refresh(syllabus)
     return syllabus
+
+
+@pytest_asyncio.fixture
+async def test_course(
+    db: AsyncSession, test_school: School, test_syllabus: Syllabus
+) -> Course:
+    """Create a test course for school A."""
+    from datetime import date, timedelta
+
+    course = Course(
+        syllabus_id=test_syllabus.id,
+        school_id=test_school.id,
+        name="Test Course for School A",
+        start_date=date.today() + timedelta(days=14),
+        end_date=date.today() + timedelta(days=44),
+        max_students=15,
+    )
+    db.add(course)
+    await db.commit()
+    await db.refresh(course)
+    return course
 
 
 @pytest_asyncio.fixture
@@ -196,6 +217,134 @@ async def super_admin_user(db: AsyncSession) -> User:
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@pytest_asyncio.fixture
+async def school_b(db: AsyncSession) -> School:
+    """Create a second school for tenant isolation tests."""
+    school = School(
+        id=2,
+        name="School B Flight Club",
+        description="Second test flight school",
+        contact_email="schoolb@flightclub.com",
+    )
+    db.add(school)
+    await db.commit()
+    await db.refresh(school)
+    return school
+
+
+@pytest_asyncio.fixture
+async def school_b_admin(db: AsyncSession, school_b: School) -> User:
+    """Create admin user for school B."""
+    user = User(
+        email="admin_b@example.com",
+        name="School B Admin",
+        auth_provider="google",
+        auth_provider_id="google-admin-b",
+    )
+    db.add(user)
+    await db.flush()
+
+    role = UserRole(
+        user_id=user.id,
+        role_type=RoleType.ADMIN,
+        school_id=school_b.id,
+    )
+    db.add(role)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def school_b_admin_client(
+    db: AsyncSession, school_b_admin: User
+) -> AsyncGenerator[AsyncClient, None]:
+    """Create test HTTP client authenticated as school B admin."""
+
+    async def override_get_db():
+        yield db
+
+    async def override_get_current_user() -> User:
+        return school_b_admin
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def school_b_student(db: AsyncSession, school_b: School) -> User:
+    """Create student user for school B."""
+    user = User(
+        email="student_b@example.com",
+        name="School B Student",
+        auth_provider="google",
+        auth_provider_id="google-student-b",
+    )
+    db.add(user)
+    await db.flush()
+
+    role = UserRole(
+        user_id=user.id,
+        role_type=RoleType.STUDENT,
+        school_id=school_b.id,
+    )
+    db.add(role)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def school_b_student_client(
+    db: AsyncSession, school_b_student: User
+) -> AsyncGenerator[AsyncClient, None]:
+    """Create test HTTP client authenticated as school B student."""
+
+    async def override_get_db():
+        yield db
+
+    async def override_get_current_user() -> User:
+        return school_b_student
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def school_b_course(
+    db: AsyncSession, school_b: School, test_syllabus: Syllabus
+) -> Course:
+    """Create a test course for school B."""
+    from datetime import date, timedelta
+
+    course = Course(
+        syllabus_id=test_syllabus.id,
+        school_id=school_b.id,
+        name="School B Test Course",
+        start_date=date.today() + timedelta(days=30),
+        end_date=date.today() + timedelta(days=60),
+        max_students=10,
+    )
+    db.add(course)
+    await db.commit()
+    await db.refresh(course)
+    return course
 
 
 @pytest_asyncio.fixture

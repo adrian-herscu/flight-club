@@ -13,7 +13,9 @@ from src.models.course import CourseStatus
 
 @pytest.mark.asyncio
 async def test_complete_course_workflow(
-    client_factory, admin_client,
+    admin_client,
+    student_client,
+    instructor_client,
     admin_user,
     student_user,
     instructor_user,
@@ -30,16 +32,14 @@ async def test_complete_course_workflow(
     course_response = await admin_client.post(
         "/api/v1/courses",
         json=course_data,
-        headers=admin_auth_headers,
     )
     assert course_response.status_code == 201
     course_id = course_response.json()["data"]["id"]
 
     # 2. Student requests enrollment
-    enroll_response = await admin_client.post(
+    enroll_response = await student_client.post(
         "/api/v1/enrollments",
         json={"course_id": course_id},
-        
     )
     assert enroll_response.status_code == 201
     enrollment_id = enroll_response.json()["data"]["id"]
@@ -48,7 +48,6 @@ async def test_complete_course_workflow(
     approve_response = await admin_client.patch(
         f"/api/v1/enrollments/{enrollment_id}/approve",
         json={},
-        headers=admin_auth_headers,
     )
     assert approve_response.status_code == 200
     assert approve_response.json()["data"]["status"] == "enrolled"
@@ -64,27 +63,24 @@ async def test_complete_course_workflow(
     lesson_response = await admin_client.post(
         f"/api/v1/courses/{course_id}/lessons",
         json=lesson_data,
-        headers=admin_auth_headers,
     )
     assert lesson_response.status_code == 201
     lesson_id = lesson_response.json()["data"]["id"]
 
     # 5. Admin assigns instructor to lesson
     assignment_data = {
-        "instructor_id": 1,
+        "instructor_id": instructor_user.id,
         "course_lesson_id": lesson_id,
     }
     assignment_response = await admin_client.post(
         "/api/v1/instructor-assignments",
         json=assignment_data,
-        headers=admin_auth_headers,
     )
     assert assignment_response.status_code == 201
 
     # 6. Verify student can see lesson in their schedule
-    schedule_response = await admin_client.get(
+    schedule_response = await student_client.get(
         f"/api/v1/courses/{course_id}",
-        
     )
     assert schedule_response.status_code == 200
     schedule_data = schedule_response.json()["data"]
@@ -92,17 +88,18 @@ async def test_complete_course_workflow(
 
 
 @pytest.mark.asyncio
-async def test_enrollment_approval_workflow(client_factory, admin_user, student_user):
+async def test_enrollment_approval_workflow(
+    admin_client, student_client, admin_user, student_user
+):
     """Test multi-student enrollment approval process."""
     course_id = 1
 
     # Multiple students request enrollment
     enrollment_ids = []
     for _ in range(12):
-        response = await admin_client.post(
+        response = await student_client.post(
             "/api/v1/enrollments",
             json={"course_id": course_id},
-            
         )
         assert response.status_code == 201
         enrollment_ids.append(response.json()["data"]["id"])
@@ -110,7 +107,6 @@ async def test_enrollment_approval_workflow(client_factory, admin_user, student_
     # Admin retrieves pending queue
     queue_response = await admin_client.get(
         "/api/v1/enrollments?status=pending_approval",
-        headers=admin_auth_headers,
     )
     assert queue_response.status_code == 200
     pending = queue_response.json()["data"]
@@ -121,7 +117,6 @@ async def test_enrollment_approval_workflow(client_factory, admin_user, student_
         response = await admin_client.patch(
             f"/api/v1/enrollments/{enrollment_id}/approve",
             json={},
-            headers=admin_auth_headers,
         )
         assert response.status_code == 200
 
@@ -130,24 +125,20 @@ async def test_enrollment_approval_workflow(client_factory, admin_user, student_
         response = await admin_client.patch(
             f"/api/v1/enrollments/{enrollment_id}/approve",
             json={},
-            headers=admin_auth_headers,
         )
         assert response.status_code == 200
         assert response.json()["data"]["status"] == "waitlist"
 
 
 @pytest.mark.asyncio
-async def test_rejection_workflow(
-    client, db, admin_auth_headers, student_auth_headers
-):
+async def test_rejection_workflow(admin_client, student_client):
     """Test enrollment rejection with reason."""
     course_id = 1
 
     # Student enrolls
-    response = await admin_client.post(
+    response = await student_client.post(
         "/api/v1/enrollments",
         json={"course_id": course_id},
-        
     )
     enrollment_id = response.json()["data"]["id"]
 
@@ -155,7 +146,6 @@ async def test_rejection_workflow(
     response = await admin_client.patch(
         f"/api/v1/enrollments/{enrollment_id}/approve",
         json={"approved": False, "rejection_reason": "Prerequisites not met"},
-        headers=admin_auth_headers,
     )
     assert response.status_code == 200
     assert response.json()["data"]["status"] == "rejected"
@@ -163,19 +153,16 @@ async def test_rejection_workflow(
 
 
 @pytest.mark.asyncio
-async def test_waitlist_fifo_promotion(
-    client, db, admin_auth_headers, student_auth_headers
-):
+async def test_waitlist_fifo_promotion(admin_client, student_client):
     """Test that waitlisted students are promoted in FIFO order."""
     course_id = 1
 
     # Enroll 12 students (course capacity is 10)
     enrollment_ids = []
     for _ in range(12):
-        response = await admin_client.post(
+        response = await student_client.post(
             "/api/v1/enrollments",
             json={"course_id": course_id},
-            
         )
         enrollment_ids.append(response.json()["data"]["id"])
 
@@ -184,7 +171,6 @@ async def test_waitlist_fifo_promotion(
         response = await admin_client.patch(
             f"/api/v1/enrollments/{enrollment_id}/approve",
             json={},
-            headers=admin_auth_headers,
         )
         assert response.status_code == 200
 
@@ -200,14 +186,12 @@ async def test_waitlist_fifo_promotion(
     # unenroll_response = await admin_client.post(
     #     f"/api/v1/enrollments/{enrollment_ids[0]}/unenroll",
     #     json={},
-    #     headers=admin_auth_headers,
     # )
     # assert unenroll_response.status_code == 200
 
     # First waitlisted student should automatically be promoted
     # promoted_response = await admin_client.get(
     #     f"/api/v1/enrollments/{enrollment_ids[10]}",
-    #     headers=admin_auth_headers,
     # )
     # assert promoted_response.status_code == 200
     # assert promoted_response.json()["data"]["status"] == "enrolled"
