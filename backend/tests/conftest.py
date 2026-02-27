@@ -374,6 +374,26 @@ async def client_factory(db: AsyncSession):
 
 
 @pytest_asyncio.fixture
+async def client(
+    db: AsyncSession,
+) -> AsyncGenerator[AsyncClient, None]:
+    """Create test HTTP client WITHOUT authentication (for testing auth requirements)."""
+
+    async def override_get_db():
+        yield db
+
+    # DO NOT override get_current_user - let it fail with 401 when auth is required
+    app.dependency_overrides[get_db] = override_get_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
 async def admin_client(
     db: AsyncSession, admin_user: User
 ) -> AsyncGenerator[AsyncClient, None]:

@@ -13,6 +13,7 @@ from src.models.course import Course, CourseStatus
 from src.models.course_lesson import CourseLesson, CourseLessonStatus
 from src.models.instructor_assignment import InstructorAssignment
 from src.models.student_enrollment import EnrollmentStatus, StudentEnrollment
+from src.models.syllabus import Syllabus
 from src.schemas.course import CourseCreate, CourseUpdate
 from src.schemas.course_lesson import CourseLessonCreate, CourseLessonUpdate
 
@@ -99,6 +100,18 @@ async def create_course(
     Raises:
         APIError: If validation fails
     """
+    # Validate that syllabus exists
+    if course_data.syllabus_id:
+        syllabus_query = select(Syllabus).where(Syllabus.id == course_data.syllabus_id)
+        result = await db.execute(syllabus_query)
+        syllabus = result.scalar_one_or_none()
+        if not syllabus:
+            raise APIError(
+                code="SYLLABUS_NOT_FOUND",
+                message=f"Syllabus {course_data.syllabus_id} not found",
+                status_code=404,
+            )
+    
     # Set default dates if not provided
     start_date = course_data.start_date or datetime.utcnow()
     end_date = course_data.end_date or (datetime.utcnow() + timedelta(days=30))

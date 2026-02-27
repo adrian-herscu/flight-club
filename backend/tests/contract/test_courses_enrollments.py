@@ -9,18 +9,19 @@ from datetime import datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
+from src.models.syllabus import Syllabus
 from src.models.user import User
 
 
 @pytest.mark.asyncio
 async def test_course_creation_requires_admin_or_super_admin(
-    client_factory, admin_user, student_user
+    client_factory, admin_user, student_user, test_syllabus: Syllabus
 ):
     """Only admins and super-admins can create courses."""
     course_data = {
         "name": "Beginner Paragliding",
         "description": "Learn the basics of paragliding",
-        "syllabus_id": 1,
+        "syllabus_id": test_syllabus.id,
         "max_students": 10,
     }
 
@@ -42,12 +43,12 @@ async def test_course_creation_requires_admin_or_super_admin(
 
 
 @pytest.mark.asyncio
-async def test_course_creation_success(admin_client: AsyncClient):
+async def test_course_creation_success(admin_client: AsyncClient, test_syllabus: Syllabus):
     """Admin can create a course successfully."""
     course_data = {
         "name": "Intermediate Hangliding",
         "description": "Build on your hangliding skills",
-        "syllabus_id": 1,
+        "syllabus_id": test_syllabus.id,
         "max_students": 20,
         "start_date": (datetime.utcnow() + timedelta(days=7)).isoformat(),
     }
