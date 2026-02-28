@@ -1,7 +1,6 @@
-import { PrismaClient, EnrollmentStatus } from "@prisma/client";
+import { EnrollmentStatus } from "@prisma/client";
 import { APIError } from "../errors";
-
-const prisma = new PrismaClient();
+import { prisma } from "../prisma";
 
 /**
  * Enrollments Service - Works with actual Prisma schema
@@ -117,7 +116,7 @@ export async function getStudentEnrollments(studentId: number) {
         },
       },
     },
-    orderBy: { course: { startDate: "desc" } },
+    orderBy: { createdAt: "desc" },
   });
 }
 

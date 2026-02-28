@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { APIError } from "../errors";
-
-const prisma = new PrismaClient();
+import { prisma } from "../prisma";
 
 /**
  * Syllabuses Service - Works with actual Prisma schema

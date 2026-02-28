@@ -1,7 +1,5 @@
-import { PrismaClient, RoleType } from "@prisma/client";
 import { APIError } from "../errors";
-
-const prisma = new PrismaClient();
+import { prisma } from "../prisma";
 
 /**
  * School Service - Works with actual Prisma schema

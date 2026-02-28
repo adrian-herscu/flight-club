@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { RoleType } from "@prisma/client";
 import { APIError } from "../errors";
-
-const prisma = new PrismaClient();
+import { prisma } from "../prisma";
 
 /**
  * Roles Service - Works with actual Prisma schema

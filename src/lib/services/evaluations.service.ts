@@ -1,7 +1,6 @@
-import { PrismaClient, EvaluationResult } from "@prisma/client";
+import { EvaluationResult } from "@prisma/client";
 import { APIError } from "../errors";
-
-const prisma = new PrismaClient();
+import { prisma } from "../prisma";
 
 /**
  * Evaluations Service - Works with actual Prisma schema

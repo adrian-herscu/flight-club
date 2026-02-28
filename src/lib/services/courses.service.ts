@@ -1,7 +1,6 @@
-import { PrismaClient, CourseStatus } from "@prisma/client";
+import { CourseStatus } from "@prisma/client";
 import { APIError } from "../errors";
-
-const prisma = new PrismaClient();
+import { prisma } from "../prisma";
 
 /**
  * Courses Service - Works with actual Prisma schema
