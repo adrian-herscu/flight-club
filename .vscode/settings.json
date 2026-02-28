@@ -25,6 +25,24 @@
     // Vitest configuration for frontend tests
     "vitest.enable": true,
     "vitest.commandLine": "npm run test:watch",
-    "testing.automaticallyOpenPeekView": "failureInVisibleDocument"
+    "testing.automaticallyOpenPeekView": "failureInVisibleDocument",
+    "sqltools.connections": [
+        {
+            "pgOptions": {
+                "ssl": {
+                    "rejectUnauthorized": false
+                }
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "db.iybjgpzqmgxeopywkzkz.supabase.co",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "password": "AYYC>yt6R*]Vx_s",
+            "username": "postgres",
+            "name": "Supabase-DB",
+            "database": "postgres"
+        }
+    ]
 }
 

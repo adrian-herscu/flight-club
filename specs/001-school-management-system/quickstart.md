@@ -59,19 +59,33 @@ npm run seed  # (if seed script exists)
 
 ## 3. Environment Configuration
 
+**⚠️ Important**: This project uses Google OAuth with Supabase. For complete setup instructions including Google credentials, see **[AUTH_SETUP.md](../../AUTH_SETUP.md)**.
+
+### Quick Setup (Existing Google Credentials)
+
 Create `.env.local` in the project root:
 
 ```dotenv
-# Database (from Supabase)
-DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
+# Supabase Cloud Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://iybjgpzqmgxeopywkzkz.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cPSqn0JW_g21z_tvDQn98Q_2SrLFm_u
 
-# Supabase Auth (from `supabase start` output)
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<local-anon-key>
+# Database Connection (for Prisma)
+# Special characters must be URL-encoded: > = %3E, * = %2A, ] = %5D
+DATABASE_URL="postgresql://postgres:PASSWORD%3Eyt6R%2A%5DVx_s@db.iybjgpzqmgxeopywkzkz.supabase.co:5432/postgres"
 
-# API URL (unified - same server)
+# JWT Secret (for backend token verification)
+SUPABASE_JWT_SECRET="+/6y78gtHHU34PS9gqPlf4aP6ueXiY3hsUwKhF14//rqR4v7v+jW3NbaK/rVee0fG0ebkVNyWBC41tttamhgBA=="
+
+# API Base URL
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
+
+**First-time setup?** See **[AUTH_SETUP.md](../../AUTH_SETUP.md)** for:
+1. Creating a Supabase project
+2. Setting up Google OAuth 2.0 credentials
+3. Configuring the provider in Supabase
+4. Testing the authentication flow
 
 ---
 
@@ -116,24 +130,74 @@ npm test -- --coverage
 
 ## 6. First-Time User Flow (Development)
 
+### Google Sign-In
+
 1. Open [http://localhost:3000](http://localhost:3000).
-2. Click **Sign in with Google** → redirects to Supabase local Auth.
-3. On first login, a `User` record is auto-created in the database.
-4. To bootstrap a super-admin:
-   ```bash
-   npx prisma studio
-   # Manually create UserRole: userId, roleType: SUPER_ADMIN, schoolId: null
-   ```
-5. Log in again → should see super-admin dashboard.
-6. From super-admin dashboard:
-   - Create a school (e.g., "Sky High School").
-   - Create a syllabus with lessons.
-   - Assign school-admin role to another user.
-7. Log in as school-admin → create course → assign instructor → enroll student.
+2. Click **"Sign in with Google"** → Redirects to Google OAuth consent
+3. After login:
+   - JWT is stored in a cookie
+   - Redirected to dashboard
+   - User profile displays in sidebar (bottom)
+
+### Dev Login (Bypass)
+
+For testing without Google OAuth:
+1. Click **"Dev Login"** button on login page
+2. Instantly logged in as `dev@local.test` with SUPER_ADMIN role
+3. No Google account required
+
+### Logged-In User Profile Display
+
+**[US12] Feature: Logged-in User Profile**
+
+Once authenticated, the left sidebar displays your profile at the bottom:
+
+```
+┌─────────────────────┐
+│                     │
+│  [Avatar] John Doe  │
+│  john@example.com   │
+│  ▶ (click to open)  │
+│                     │
+└─────────────────────┘
+```
+
+- **Avatar**: Google profile picture or initials
+- **Name**: Full name from Google profile
+- **Email**: Email address
+- **Dropdown menu** (click to open):
+  - View full name and email
+  - **Logout** button (with hover highlight)
+
+**Components**:
+- [src/components/UserProfile.tsx](../../src/components/UserProfile.tsx) - Fetches user data from Supabase Auth, renders profile UI
+- [src/components/NavShell.tsx](../../src/components/NavShell.tsx) - Integrates UserProfile at bottom of sidebar
+
+**Data source**: Supabase `auth.getUser()` returns authenticated user with Google metadata:
+```typescript
+{
+  email: "john@example.com",
+  user_metadata: {
+    full_name: "John Doe",
+    avatar_url: "https://lh3.googleusercontent.com/...",
+  }
+}
+```
+
+**Responsive behavior**:
+- **Desktop (≥768px)**: Profile shown in sidebar (always visible)
+- **Mobile (<768px)**: Profile hidden to preserve space (can be added to mobile menu if needed)
+- **Logout flow**: Clears session and redirects to login page
 
 ---
 
 ## 7. Deployment (Tier 0)
+
+### Prerequisites
+
+- Supabase project created (see [AUTH_SETUP.md](../../AUTH_SETUP.md))
+- Google OAuth credentials configured in Supabase
+- Cloud database URL obtained
 
 ### Full-Stack → Vercel
 
@@ -147,53 +211,27 @@ npm test -- --coverage
    npm start
    ```
 4. Set **Environment Variables**:
-   - `DATABASE_URL` - Supabase cloud DB URL
-   - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+   - `DATABASE_URL` - Supabase cloud DB URL (with URL-encoded password)
+   - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL (e.g., `https://iybjgpzqmgxeopywkzkz.supabase.co`)
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
-   - `NEXT_PUBLIC_API_URL` - Production API URL (e.g., https://your-app.vercel.app)
+   - `SUPABASE_JWT_SECRET` - Supabase JWT secret
+   - `NEXT_PUBLIC_API_URL` - Production API URL (e.g., `https://your-app.vercel.app`)
+
+5. Update Google OAuth in Google Cloud Console:
+   - Add your Vercel domain to **Authorized JavaScript origins**
+   - Ensure redirect URI still points to Supabase: `https://iybjgpzqmgxeopywkzkz.supabase.co/auth/v1/callback`
 
 ---
 
-## 8. Troubleshooting
-
-**Tests fail with "fetch failed"?**
-- Make sure dev server is running: `npm run dev` in a separate terminal
-
-**Port 3000 already in use?**
-- Kill the process: `lsof -ti:3000 | xargs kill -9`
-- Or start on different port: `PORT=3001 npm run dev`
-
-**Database connection fails?**
-- Check Supabase is running: `supabase status`
-- Verify DATABASE_URL in .env.local matches your local Supabase setup
-2. Set **Root Directory** to `frontend/`.
-3. Add **Environment Variables**:
-   - `NEXT_PUBLIC_SUPABASE_URL` - Supabase cloud URL
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
-   - `NEXT_PUBLIC_API_URL` - Render backend URL
-
-### Database + Auth → Supabase (Free)
-
-1. Create Supabase project at [supabase.com](https://supabase.com).
-2. Enable **Google OAuth** under Authentication → Providers.
-3. Create database tables (Prisma migrations):
-   ```bash
-   # Use Supabase connection string in prisma/.env
-   npx prisma migrate deploy
-   ```
-4. Update frontend OAuth redirect URIs to include Vercel URL.
-
----
-
-## 8. Key URLs (Local)
+## 8. Key URLs (Local Development)
 
 | Service | URL |
 |---------|-----|
 | Frontend + API | http://localhost:3000 |
+| Login Page | http://localhost:3000/login |
 | API Routes | /api/v1/* |
 | API Health | http://localhost:3000/api/v1/health |
 | Prisma Studio | run `npx prisma studio` |
-| Supabase Studio | http://localhost:54323 |
 
 ---
 
@@ -201,9 +239,41 @@ npm test -- --coverage
 
 | Issue | Fix |
 |-------|-----|
-| Backend won't start | Ensure `DATABASE_URL` is set and database is accessible; check Node.js version ≥ 20 |
+| Google OAuth: "redirect_uri_mismatch" | See [AUTH_SETUP.md Part 2](../../AUTH_SETUP.md#part-2-set-up-google-oauth-credentials) — ensure Supabase callback URL is registered |
+| Backend won't start | Ensure `DATABASE_URL` is set, correctly URL-encoded, and database is accessible |
 | Prisma Client not found | Run `npx prisma generate` |
-| JWT verification fails | Confirm `SUPABASE_JWT_SECRET` matches Supabase instance (check `supabase status`) |
-| Google OAuth fails | Add `http://localhost:3000` to Supabase Google OAuth redirect URIs |
+| JWT verification fails | Confirm `SUPABASE_JWT_SECRET` matches Supabase JWT secret from dashboard |
+| User profile not showing | Verify user is authenticated; check Supabase dashboard → Authentication → Users |
 | Database migration fails | Check `DATABASE_URL` connection; run `npx prisma db execute --stdin < /dev/null` |
 | Tests failing | Clear cache: `rm -rf node_modules/.vite`; reinstall: `npm install` |
+
+---
+
+## 10. Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Browser (Client)                      │
+│  - Next.js Frontend (React)                              │
+│  - Stores JWT in cookie (Supabase client)                │
+│  - Displays UserProfile from authenticated session       │
+└────────────────────┬────────────────────────────────────┘
+                     │ Authorization: Bearer <JWT>
+                     ↓
+┌─────────────────────────────────────────────────────────┐
+│              Next.js Backend (Node.js)                   │
+│  - API routes at /api/v1/*                               │
+│  - Auth middleware verifies JWT using SUPABASE_JWT_SECRET│
+│  - Scopes all queries to user's school_id               │
+└────────────────────┬────────────────────────────────────┘
+                     │ SQL
+                     ↓
+┌─────────────────────────────────────────────────────────┐
+│         Supabase PostgreSQL (Cloud)                      │
+│  - Stores users, schools, courses, enrollments, etc.     │
+│  - Connected via DATABASE_URL                            │
+└─────────────────────────────────────────────────────────┘
+
+Authentication Flow:
+User → Google OAuth (via Supabase) → JWT in cookie → Backend verification → API access
+```

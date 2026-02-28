@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * T064 [US12] Touch-friendly enrollment queue with mobile optimizations
+ * 
+ * Enhancements:
+ * - Larger touch targets (min 44px height)
+ * - Responsive button sizing
+ * - Stack buttons on mobile for easier tapping
+ */
+
 import { useState, useEffect } from "react";
 import { apiClient } from "@/services/apiClient";
 
@@ -159,24 +168,26 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
                     <div
                       style={{
                         display: "flex",
-                        gap: "0.5rem",
+                        gap: "0.75rem",
                         minWidth: "fit-content",
                         paddingLeft: "1rem",
                       }}
+                      className="button-group"
                     >
                       <button
                         onClick={() => handleApprove(enrollment.id)}
                         disabled={actionLoading === enrollment.id}
                         style={{
-                          padding: "0.625rem 1.25rem",
+                          padding: "0.75rem 1.5rem", // Increased for touch
+                          minHeight: "48px", // Touch-friendly height
                           background: actionLoading === enrollment.id ? "#ccc" : "#34a853",
                           color: "white",
                           border: "none",
                           borderRadius: "4px",
                           cursor: actionLoading === enrollment.id ? "not-allowed" : "pointer",
-                          fontSize: "0.875rem",
+                          fontSize: "1rem", // Increased from 0.875rem
                           fontWeight: 500,
-                          minWidth: "90px",
+                          minWidth: "110px", // Increased for touch
                         }}
                       >
                         {actionLoading === enrollment.id ? "Processing..." : "Approve"}
@@ -185,19 +196,43 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
                         onClick={() => handleReject(enrollment.id)}
                         disabled={actionLoading === enrollment.id}
                         style={{
-                          padding: "0.625rem 1.25rem",
+                          padding: "0.75rem 1.5rem", // Increased for touch
+                          minHeight: "48px", // Touch-friendly height
                           background: actionLoading === enrollment.id ? "#ccc" : "#ea4335",
                           color: "white",
                           border: "none",
                           borderRadius: "4px",
                           cursor: actionLoading === enrollment.id ? "not-allowed" : "pointer",
-                          fontSize: "0.875rem",
+                          fontSize: "1rem", // Increased from 0.875rem
                           fontWeight: 500,
-                          minWidth: "90px",
+                          minWidth: "110px", // Increased for touch
                         }}
                       >
                         {actionLoading === enrollment.id ? "Processing..." : "Reject"}
                       </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </>
+      )}
+
+      {/* Responsive styles for mobile */}
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .button-group {
+            flex-direction: column !important;
+            width: 100% !important;
+            padding-left: 0 !important;
+            margin-top: 1rem !important;
+          }
+
+          .button-group button {
+            width: 100% !important;
+          }
+        }
+      `}</style>
                     </div>
                   </div>
 

@@ -15,22 +15,42 @@ Multi-tenant SaaS platform for managing paragliding and hang gliding schools.
 
 ## Quick Start
 
+### 🔐 Authentication Setup
+
+**First time?** Complete authentication setup is documented in **[AUTH_SETUP.md](AUTH_SETUP.md)**
+
+This includes:
+- Creating a Supabase project
+- Setting up Google OAuth 2.0 credentials
+- Configuring environment variables
+- Testing locally with Google sign-in
+
 ### Prerequisites
 - Node.js >= 20.0.0
-- PostgreSQL 16 (via Supabase)
+- PostgreSQL 16 (via Supabase cloud)
+- Google account (for Google OAuth testing)
 
-### Setup
+### Setup (Cloud Supabase)
 
 ```bash
 npm install
 npx prisma generate
+
+# Configure environment variables
 cp .env.local.example .env.local
-# Edit .env.local with your Supabase credentials
-npm run dev
+# Edit .env.local with Supabase credentials (see AUTH_SETUP.md Section 4.2)
+
+# Deploy migrations to cloud database
+export DATABASE_URL="postgresql://..."  # URL-encoded password
+npx prisma migrate deploy
+npm run seed  # Optional: load sample data
+
+npm run dev:restart
 ```
 
 App: `http://localhost:3000`  
-API: `http://localhost:3000/api/v1/`
+API: `http://localhost:3000/api/v1/`  
+**Login with**: Google OAuth or Dev Login button
 
 ---
 
@@ -40,7 +60,8 @@ API: `http://localhost:3000/api/v1/`
 - **Pages**: React 18 components at `/` routes
 - **API**: Next.js API routes at `/api/v1/*`
 - **Database**: PostgreSQL 16 via Supabase
-- **Auth**: Supabase Auth (Google OIDC) + JWT verification
+- **Auth**: Supabase Auth (Google OAuth 2.0) + JWT verification (see [AUTH_SETUP.md](AUTH_SETUP.md))
+- **User Profile**: Displays logged-in user with Google profile info (see [src/components/UserProfile.tsx](src/components/UserProfile.tsx))
 - **ORM**: Prisma 5
 - **Validation**: Zod 3
 - **Deployment**: Vercel (single deployment)

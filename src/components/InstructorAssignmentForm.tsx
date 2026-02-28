@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { apiClient } from "@/services/apiClient";
+import type { LessonConflict } from "@/lib/schemas/conflict";
 
 interface Instructor {
   id: number;
@@ -16,15 +17,6 @@ interface CourseLesson {
   sequence_order: number;
   start_time: string | null;
   location: string | null;
-}
-
-interface ConflictDetails {
-  conflicting_lesson_id: number;
-  conflicting_course_title: string;
-  conflicting_lesson_title: string;
-  conflicting_start_time: string;
-  conflicting_end_time: string;
-  location: string;
 }
 
 interface InstructorAssignmentFormProps {
@@ -45,7 +37,7 @@ export default function InstructorAssignmentForm({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [conflicts, setConflicts] = useState<ConflictDetails[]>([]);
+  const [conflicts, setConflicts] = useState<LessonConflict[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -87,10 +79,13 @@ export default function InstructorAssignmentForm({
       await apiClient.post(`/api/v1/courses/${courseId}/instructors`, payload);
       onSuccess?.();
     } catch (err: any) {
-      // Check if error response contains overbooking conflict details
+      // T062 [US5] Handle overbooking conflict response
       if (err.response?.status === 409 && err.response?.data?.error?.details?.conflicts) {
-        setConflicts(err.response.data.error.details.conflicts);
-        setError("Instructor has scheduling conflicts. See details below.");
+        const conflictData = err.response.data.error.details.conflicts as LessonConflict[];
+        setConflicts(conflictData);
+        setError(
+          `Instructor has ${conflictData.length} scheduling conflict${conflictData.length > 1 ? "s" : ""}. See details below.`
+        );
       } else {
         setError(err instanceof Error ? err.message : "Failed to assign instructor");
       }
@@ -209,13 +204,16 @@ export default function InstructorAssignmentForm({
                 fontSize: "0.875rem",
                 color: "#856404",
               }}
-            >
-              {conflicts.map((conflict, index) => (
-                <li key={index} style={{ marginBottom: "0.5rem" }}>
-                  <strong>{conflict.conflicting_course_title}</strong> -{" "}
-                  {conflict.conflicting_lesson_title}
+            >urseName}</strong> - {conflict.lessonTitle}
                   <br />
-                  {new Date(conflict.conflicting_start_time).toLocaleString()} -{" "}
+                  {new Date(conflict.startTime).toLocaleString()} -{" "}
+                  {new Date(conflict.endTime).toLocaleString()}
+                  <br />
+                  Location: {conflict.location}
+                  <br />
+                  <span style={{ fontSize: "0.8rem", color: "#666" }}>
+                    Duration: {conflict.durationHours}h
+                  </span>g_start_time).toLocaleString()} -{" "}
                   {new Date(conflict.conflicting_end_time).toLocaleString()}
                   <br />
                   Location: {conflict.location}

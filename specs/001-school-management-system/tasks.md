@@ -79,7 +79,7 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 - [x] T024 [US11] Add role-gated UI components in src/components/RoleGate.tsx and src/components/NavShell.tsx
 - [x] T025 [US11] Create role landing pages in src/app/super-admin/page.tsx, src/app/admin/page.tsx, src/app/instructor/page.tsx, src/app/student/page.tsx
 - [x] T025a [US11] Write contract test for equal admin permissions in tests/contract/rbac.test.ts (verify no admin has privilege that others don't)
-- [ ] T025b [US11] Write enforcement validation in src/lib/services/role.service.ts to prevent admin permission hierarchy
+- [x] T025b [US11] Write enforcement validation in src/lib/services/role.service.ts to prevent admin permission hierarchy
 
 ---
 
@@ -190,9 +190,9 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Admin cannot assign instructor to overlapping lesson; conflict details displayed.
 
-- [ ] T060 [US5] Implement overbooking query in src/lib/services/instructor.service.ts
-- [ ] T061 [US5] Add conflict response schema in src/lib/schemas/conflict.ts
-- [ ] T062 [US5] Surface conflict UI in src/components/InstructorAssignmentForm.tsx
+- [x] T060 [US5] Implement overbooking query in src/lib/services/instructor.service.ts
+- [x] T061 [US5] Add conflict response schema in src/lib/schemas/conflict.ts
+- [x] T062 [US5] Surface conflict UI in src/components/InstructorAssignmentForm.tsx
 
 ---
 
@@ -202,8 +202,8 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Key workflows operate on 375px and 1920px screens without missing features.
 
-- [ ] T063 [US12] Apply responsive layout updates in src/components/NavShell.tsx and src/components/ResponsiveTable.tsx
-- [ ] T064 [US12] Add touch-friendly controls in src/components/EvaluationForm.tsx and src/components/EnrollmentQueue.tsx
+- [x] T063 [US12] Apply responsive layout updates in src/components/NavShell.tsx and src/components/ResponsiveTable.tsx
+- [x] T064 [US12] Add touch-friendly controls in src/components/EvaluationForm.tsx and src/components/EnrollmentQueue.tsx
 
 ---
 

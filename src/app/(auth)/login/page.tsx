@@ -41,11 +41,18 @@ export default function LoginPage() {
   }, [router, redirectPath]);
 
   const handleDevLogin = () => {
-    // Dev mode: set cookies for local testing
-    // Set auth token for API calls
-    document.cookie =
-      "sb-access-token=dev-token-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInN1YiI6IjEyMzQ1Njc4LWFiY2QtNDEyMy05YWJjLWRlZjEyMzQ1Njc4OSIsImVtYWlsIjoiZGV2QGxvY2FsLmNvbSIsImV4cCI6OTk5OTk5OTk5OSwiaWF0IjoxNjAwMDAwMDAwfQ.xxxxxxxx; path=/;";
-    router.push(redirectPath);
+    // Dev mode: set a dev token that will be recognized by the API
+    // This bypasses Supabase auth for local development
+    const devToken = "dev-mode-local-testing-token";
+    document.cookie = `sb-access-token=${devToken}; path=/; max-age=86400`;
+
+    // Set a flag to indicate dev mode
+    localStorage.setItem("dev-mode", "true");
+    localStorage.setItem("dev-user-email", "dev@local.com");
+    localStorage.setItem("dev-user-name", "Dev User");
+
+    // Redirect to home
+    window.location.href = redirectPath;
   };
 
   const handleGoogleLogin = async () => {

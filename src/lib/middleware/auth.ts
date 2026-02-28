@@ -44,6 +44,37 @@ export async function getCurrentUser(authHeader: string): Promise<User> {
   }
 
   const token = authHeader.substring(7);
+
+  // DEV MODE: Allow bypass for local development
+  if (token === "dev-mode-local-testing-token" && process.env.NODE_ENV === "development") {
+    // Return or create a dev user
+    let user = await prisma.user.findUnique({
+      where: { email: "dev@local.com" },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: "dev@local.com",
+          name: "Dev User",
+          authProvider: "dev",
+          authProviderId: "dev-1",
+        },
+      });
+
+      // Create super-admin role for dev user
+      await prisma.userRole.create({
+        data: {
+          userId: user.id,
+          schoolId: null,
+          roleType: "SUPER_ADMIN",
+        },
+      });
+    }
+
+    return user;
+  }
+
   const payload = await verifyJWT(token);
 
   const user = await syncUserFromToken(payload);
