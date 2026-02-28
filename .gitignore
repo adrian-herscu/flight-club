@@ -6,16 +6,6 @@ build/
 .next/
 out/
 
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-*.egg-info/
-*.pyo
-*.pyd
-.Python
-
 # Environment files (keep .env.example for documentation)
 .env
 .env.local
@@ -39,13 +29,6 @@ Thumbs.db
 
 # Testing
 coverage/
-.pytest_cache/
 .coverage
 htmlcov/
-
-# Build artifacts
-*.pyc
-*.pyo
-*.so
-*.dll
 *.dylib

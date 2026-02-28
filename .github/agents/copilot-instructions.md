@@ -4,27 +4,38 @@ Auto-generated from all feature plans. Last updated: 2026-02-24
 
 ## Active Technologies
 
-- Python 3.12 (backend), TypeScript / Next.js 14 (frontend) + FastAPI, SQLAlchemy 2 + Alembic, Pydantic v2, Supabase Auth (Google OIDC), Resend (email), httpx, pytest, Playwright (001-school-management-system)
+- TypeScript / Next.js 14 (unified full-stack)
+- Prisma 5 ORM
+- Zod validation
+- Supabase Auth (Google OIDC)
+- Resend (email)
+- jose (JWT verification)
+- Vitest (testing)
+- Playwright (E2E testing)
 
 ## Project Structure
 
 ```text
-backend/
-frontend/
-tests/
+src/        # Unified Next.js full-stack application
+tests/      # All tests
+prisma/    # Database schema
 ```
 
 ## Commands
 
-cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+cd src
+npm test
+npm run lint
+npm test, npm run dev, npm run build, npm run migrate
 
 ## Code Style
 
-Python 3.12 (backend), TypeScript / Next.js 14 (frontend): Follow standard conventions
+TypeScript / Next.js 14: Follow standard conventions
 
 ## Recent Changes
 
-- 001-school-management-system: Added Python 3.12 (backend), TypeScript / Next.js 14 (frontend) + FastAPI, SQLAlchemy 2 + Alembic, Pydantic v2, Supabase Auth (Google OIDC), Resend (email), httpx, pytest, Playwright
+- 001-school-management-system: Unified to TypeScript / Next.js 14 full-stack architecture
+Auto-generated from all feature plans. Last updated: 2026-02-28
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

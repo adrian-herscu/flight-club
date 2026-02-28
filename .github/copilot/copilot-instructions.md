@@ -53,21 +53,23 @@ It uses the **SpecKit** spec-driven workflow for all feature development.
 ### Application Directory Structure
 
 ```text
-backend/         # FastAPI application (Python 3.12)
-├── src/         # Domain models, services, API routes
-└── tests/       # pytest unit + integration tests
+src/             # Unified Next.js 14 full-stack application
+├── app/         # Pages, API routes, components
+├── lib/         # Services, middleware, utilities
+└── middleware.ts # Auth + RBAC middleware
 
-frontend/        # Next.js 14 application (React, SSR)
-├── src/         # Pages, components, hooks, services
-└── tests/       # Playwright E2E tests
+tests/           # All tests (unit, integration, E2E)
+├── contract/    # API route handler tests
+├── integration/ # Full-stack API tests
+└── e2e/         # End-to-end workflow tests
 
 infra/           # Infrastructure-as-code
-├── vercel.json  # Vercel frontend config
-├── render.yaml  # Render backend config
-└── supabase/    # Supabase CLI migrations
 
 docs/            # ADRs, data-model diagrams, API changelog
 specs/           # Created at runtime; one subdirectory per feature
+docs/            # ADRs, data-model diagrams, API changelog
+
+prisma/          # Database schema and migrations
 ```
 
 ### SpecKit Workflow Directory Structure
@@ -228,25 +230,24 @@ When context files don't provide specific guidance:
 
 ## Technology-Specific Guidelines
 
-### Python / FastAPI (backend)
 
-- Target **Python 3.12**; use `from __future__ import annotations` for forward refs.
-- All route handlers MUST be `async def`; use `httpx.AsyncClient` for outbound calls.
-- Pydantic v2 models for all request/response schemas; no raw `dict` returns.
-- Every response model MUST include a `request_id: str` field (see Principle II).
-- Business logic lives in `backend/src/services/`; routers in `backend/src/api/`
+### TypeScript / Next.js (unified full-stack)
+  scripts alongside the DDL, never in ad-hoc scripts. Every data migration MUST
+- Target **TypeScript 5.x**; use strict mode throughout.
+- All API route handlers in `src/app/api/v1/` MUST be `async` functions.
+- Zod schemas for all request/response validation; use `.parse()` for validation.
+- Every API response MUST include `request_id` in the envelope (see Principle II).
+- Business logic lives in `src/lib/services/`; route handlers in `src/app/api/v1/`
   are thin — no logic beyond input validation and service delegation.
 - All tenant-scoped DB queries MUST filter by `school_id` (see Principle I).
-- JWT verification uses Supabase's public JWKS endpoint; never hardcode keys.
-- Supabase service-role key is server-side only; never pass it to frontend code.
-- **Logging**: configure Python `logging` with a JSON formatter writing to
-  `stdout`. Every log record related to a request MUST include `request_id`.
-  Use log levels consistently: `DEBUG` for internal state, `INFO` for normal
-  operations, `WARNING` for recoverable anomalies, `ERROR` for exceptions.
-  Never log PII (email, name, licence number) at `DEBUG`/`INFO` level.
-- **Migrations**: all schema and data changes use Alembic migration scripts.
-  Data migrations (backfills, reshaping, seed data) MUST be in versioned Alembic
-  scripts alongside the DDL, never in ad-hoc scripts. Every data migration MUST
+- JWT verification uses `jose` library with Supabase's public JWKS endpoint; never hardcode keys.
+- Supabase service-role key is server-side only (in `.env.local`); never expose to frontend.
+- **Logging**: use structured logging with JSON output to `stdout`. Every log record
+  related to a request MUST include `request_id`. Use log levels: `debug` for internal
+  state, `info` for normal operations, `warn` for recoverable issues, `error` for exceptions.
+  Never log PII (email, name, ID numbers) at `debug`/`info` level.
+- **Migrations**: all schema and data changes use Prisma migrations.
+  Data migrations (backfills, reshaping, seed data) generated via `npx prisma migrate`.
   be idempotent. Backfills MUST process rows in batches (≤ 500 rows/transaction)
   to avoid table locks. Tenant CSV onboarding is an API feature, not a migration.
 - Follow `backend/src/` naming: `snake_case` modules, `PascalCase` models,
@@ -259,7 +260,7 @@ When context files don't provide specific guidance:
   are strictly required (see Principle VI — no premature client-side rendering).
 - Auth state comes from Supabase Auth client (`@supabase/ssr`); never store
   tokens in `localStorage` — use the Supabase cookie helper.
-- API calls to the FastAPI backend include `Authorization: Bearer <jwt>` header;
+- API calls to the Next.js API backend include `Authorization: Bearer <jwt>` header;
   never call the backend from Server Components without the user's token.
 - Tailwind CSS for styling; no CSS-in-JS libraries.
 - Follow `frontend/src/` naming: `PascalCase` components, `camelCase` hooks
@@ -267,7 +268,7 @@ When context files don't provide specific guidance:
 
 ### Testing
 
-- **Backend**: `pytest` + `httpx.AsyncClient`; run with `make test`.
+- **Backend**: Vitest for API route testing; run with `npm test`.
   Coverage gate: ≥ 80% line coverage on `backend/src/` enforced in CI.
   Integration tests MUST cover booking conflicts, certificate expiry, and RBAC.
 - **Frontend / E2E**: Playwright; smoke suite runs on every PR via GitHub Actions.

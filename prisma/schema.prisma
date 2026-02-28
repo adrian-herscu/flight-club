@@ -1,0 +1,292 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== CORE TABLES =====
+
+model School {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  contactEmail String? @db.VarChar(255) @map("contact_email")
+  contactPhone String? @db.VarChar(50) @map("contact_phone")
+  addressLine1 String? @db.VarChar(255) @map("address_line1")
+  addressLine2 String? @db.VarChar(255) @map("address_line2")
+  city        String?  @db.VarChar(100)
+  state       String?  @db.VarChar(50)
+  postalCode  String?  @db.VarChar(20) @map("postal_code")
+  country     String?  @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Relations
+  userRoles             UserRole[]
+  courses               Course[]
+  studentEnrollments    StudentEnrollment[]
+  instructorAssignments InstructorAssignment[]
+  evaluations           StudentLessonEvaluation[]
+
+  @@map("schools")
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  email          String   @unique @db.VarChar(255)
+  name           String?  @db.VarChar(255)
+  authProvider   String   @map("auth_provider") @db.VarChar(50)
+  authProviderId String   @map("auth_provider_id") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Relations
+  roles                 UserRole[]
+  enrollments           StudentEnrollment[]
+  instructorAssignments InstructorAssignment[]
+  evaluations           StudentLessonEvaluation[]
+
+  @@index([email])
+  @@index([authProviderId], map: "ix_users_auth_provider_id")
+  @@map("users")
+}
+
+enum RoleType {
+  SUPER_ADMIN
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+
+  @@map("roletype")
+}
+
+model UserRole {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  schoolId  Int?     @map("school_id")
+  roleType  RoleType @map("role_type")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, schoolId, roleType], map: "uq_user_school_role")
+  @@map("user_roles")
+}
+
+// ===== SYLLABUS TABLES =====
+
+enum SyllabusStatus {
+  DRAFT
+  FINAL
+
+  @@map("syllabusstatus")
+}
+
+model Syllabus {
+  id          Int             @id @default(autoincrement())
+  title       String          @db.VarChar(255)
+  description String?         @db.Text
+  status      SyllabusStatus
+  version     Int
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  finalizedAt DateTime?       @map("finalized_at") @db.Timestamptz(3)
+
+  // Relations
+  lessons Lesson[]
+  courses Course[]
+
+  @@map("syllabuses")
+}
+
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  syllabusId  Int      @map("syllabus_id")
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  order       Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // Relations
+  syllabus Syllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+
+  @@map("lessons")
+}
+
+// ===== COURSE TABLES =====
+
+enum CourseStatus {
+  pending
+  in_progress
+  completed
+  cancelled
+
+  @@map("coursestatus")
+}
+
+model Course {
+  id          Int          @id @default(autoincrement())
+  schoolId    Int          @map("school_id")
+  syllabusId  Int          @map("syllabus_id")
+  name        String       @db.VarChar(256)
+  description String?      @db.VarChar(1024)
+  maxStudents Int          @map("max_students")
+  status      CourseStatus
+  startDate   DateTime     @map("start_date")
+  endDate     DateTime     @map("end_date")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  school                School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  syllabus              Syllabus               @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  lessons               CourseLesson[]
+  enrollments           StudentEnrollment[]
+  instructorAssignments InstructorAssignment[]
+
+  @@index([schoolId], map: "ix_courses_school_id")
+  @@index([status], map: "ix_courses_status")
+  @@map("courses")
+}
+
+enum CourseLessonStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
+
+  @@map("courselessonstatus")
+}
+
+model CourseLesson {
+  id            Int                 @id @default(autoincrement())
+  courseId      Int                 @map("course_id")
+  title         String              @db.VarChar(256)
+  description   String?             @db.VarChar(1024)
+  startTime     DateTime?           @map("start_time")
+  durationHours Float               @map("duration_hours")
+  location      String?             @db.VarChar(256)
+  sequenceOrder Int                 @map("sequence_order")
+  status        CourseLessonStatus
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  course                Course                    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructorAssignments InstructorAssignment[]
+  evaluations           StudentLessonEvaluation[]
+
+  @@unique([courseId, sequenceOrder], map: "uq_course_sequence_order")
+  @@index([courseId], map: "ix_course_lessons_course_id")
+  @@index([status], map: "ix_course_lessons_status")
+  @@index([location, startTime], map: "ix_course_lessons_location_start")
+  @@map("course_lessons")
+}
+
+// ===== ENROLLMENT TABLES =====
+
+enum EnrollmentStatus {
+  pending_approval
+  enrolled
+  waitlist
+  rejected
+  unenrolled
+
+  @@map("enrollmentstatus")
+}
+
+model StudentEnrollment {
+  id               Int              @id @default(autoincrement())
+  studentId        Int              @map("student_id")
+  courseId         Int              @map("course_id")
+  schoolId         Int              @map("school_id")
+  status           EnrollmentStatus
+  rejectionReason  String?          @map("rejection_reason") @db.Text
+  waitlistPosition Int?             @map("waitlist_position")
+  paymentId        String?          @map("payment_id") @db.VarChar(256)
+  paymentStatus    String?          @map("payment_status") @db.VarChar(50)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  student     User                      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course      Course                    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  school      School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  evaluations StudentLessonEvaluation[]
+
+  @@index([studentId], map: "ix_enrollments_student_id")
+  @@index([courseId], map: "ix_enrollments_course_id")
+  @@index([status], map: "ix_enrollments_status")
+  @@index([schoolId], map: "ix_enrollments_school_id")
+  @@index([courseId, status, waitlistPosition], map: "ix_enrollments_waitlist")
+  @@map("student_enrollments")
+}
+
+// ===== INSTRUCTOR ASSIGNMENTS =====
+
+model InstructorAssignment {
+  id             Int       @id @default(autoincrement())
+  instructorId   Int       @map("instructor_id")
+  courseId       Int       @map("course_id")
+  courseLessonId Int?      @map("course_lesson_id")
+  schoolId       Int       @map("school_id")
+  assignedAt     DateTime  @map("assigned_at")
+
+  // Relations
+  instructor    User          @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  course        Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseLesson  CourseLesson? @relation(fields: [courseLessonId], references: [id], onDelete: Cascade)
+  school        School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([instructorId, courseId], map: "uq_course_level_assignment")
+  @@index([instructorId], map: "ix_instructor_assignments_instructor_id")
+  @@index([courseId], map: "ix_instructor_assignments_course_id")
+  @@index([courseLessonId], map: "ix_instructor_assignments_lesson_id")
+  @@index([schoolId], map: "ix_instructor_assignments_school_id")
+  @@map("instructor_assignments")
+}
+
+// ===== EVALUATIONS =====
+
+enum EvaluationResult {
+  pass
+  fail
+  not_attempted
+
+  @@map("evaluationresult")
+}
+
+model StudentLessonEvaluation {
+  id             Int               @id @default(autoincrement())
+  studentId      Int               @map("student_id")
+  enrollmentId   Int               @map("enrollment_id")
+  courseLessonId Int               @map("course_lesson_id")
+  schoolId       Int               @map("school_id")
+  result         EvaluationResult? @default(not_attempted)
+  feedbackNotes  String?           @map("feedback_notes") @db.Text
+  adminNotes     String?           @map("admin_notes") @db.Text
+  isFinalized    Boolean           @default(false) @map("is_finalized")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @default(now()) @updatedAt @map("updated_at")
+  finalizedAt    DateTime?         @map("finalized_at") @db.Timestamptz(3)
+
+  // Relations
+  student      User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment   StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  courseLesson CourseLesson      @relation(fields: [courseLessonId], references: [id], onDelete: Cascade)
+  school       School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseLessonId], map: "uq_student_lesson_evaluation")
+  @@index([studentId], map: "ix_student_lesson_evaluations_student_id")
+  @@index([courseLessonId], map: "ix_student_lesson_evaluations_course_lesson_id")
+  @@index([schoolId], map: "ix_student_lesson_evaluations_school_id")
+  @@map("student_lesson_evaluations")
+}

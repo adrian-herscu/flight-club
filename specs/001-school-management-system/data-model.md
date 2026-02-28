@@ -75,7 +75,7 @@ Represents an authenticated person. Identity is managed by Supabase Auth. Includ
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | |
 
-**Ownership**: created automatically on first Google login (Supabase Auth trigger or FastAPI upsert).  
+**Ownership**: created automatically on first Google login (Supabase Auth trigger or Next.js API route).
 **Validation**: `oauth_email` is immutable (sourced from Supabase JWT at signup); `email` is mutable (user can update anytime). Both UNIQUE.  
 **Personal ID security**: `personal_id` and `personal_id_type` are sensitive; access restricted to school admins and super-admins only (never exposed to other students). Phone, address, and emergency contact similarly restricted to school context.
 

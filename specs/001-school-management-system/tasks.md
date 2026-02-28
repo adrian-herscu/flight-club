@@ -16,25 +16,25 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [x] T001 Create backend dependency files in backend/requirements.txt and backend/requirements-dev.txt
-- [x] T002 Create frontend project configuration in frontend/package.json, frontend/next.config.js, frontend/tsconfig.json
-- [x] T003 [P] Configure linting/formatting in backend/pyproject.toml, frontend/.eslintrc.cjs, frontend/.prettierrc
-- [x] T004 [P] Add environment templates in backend/.env.example and frontend/.env.local.example
-- [x] T005 [P] Add project automation targets in Makefile (test, lint, build, migrate, seed)
+- [x] T001 Create backend dependency files (now unified at root: package.json, package-lock.json)
+- [x] T002 Create frontend project configuration (now unified at root: next.config.js, tsconfig.json)
+- [x] T003 [P] Configure linting/formatting in root tsconfig.json, .eslintrc.cjs, .prettierrc (unified)
+- [x] T004 [P] Add environment templates in root .env.local.example (unified)
+- [x] T005 [P] Add project automation targets in package.json npm scripts (test, lint, build, migrate, seed)
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [x] T006 Setup Alembic scaffolding in backend/alembic.ini and backend/alembic/env.py
-- [x] T007 Create DB session/base model in backend/src/core/db.py and backend/src/models/base.py
-- [x] T008 Create settings/config loader in backend/src/core/config.py
-- [x] T009 Implement response envelope + error helpers in backend/src/core/responses.py and backend/src/core/exceptions.py
-- [x] T010 Add request_id middleware in backend/src/core/middleware/request_id.py and register in backend/src/main.py
-- [x] T011 Add API v1 router + health endpoint in backend/src/api/v1/router.py, backend/src/api/v1/health.py, backend/src/main.py
-- [x] T012 [P] Add frontend API client wrapper in frontend/src/services/apiClient.ts
-- [x] T013 [P] Create base layouts + navigation shell in frontend/src/app/layout.tsx and frontend/src/components/NavShell.tsx
-- [x] T014 [P] Add shared API response types in frontend/src/services/types.ts
+- [x] T006 Setup Prisma schema in prisma/schema.prisma (unified)
+- [x] T007 Create database client in src/lib/db.ts and base types in src/lib/ (unified)
+- [x] T008 Create settings/config loader in src/lib/config.ts (unified)
+- [x] T009 Implement response envelope + error helpers in src/lib/responses.ts and src/lib/errors.ts (unified)
+- [x] T010 Add request-id middleware in src/lib/middleware/request-id.ts and register in Next.js app (unified)
+- [x] T011 Add API v1 router + health endpoint in src/app/api/v1/ (Next.js API routes)
+- [x] T012 [P] Add frontend API client wrapper in src/services/apiClient.ts
+- [x] T013 [P] Create base layouts + navigation shell in src/app/layout.tsx and src/components/NavShell.tsx
+- [x] T014 [P] Add shared API response types in src/services/types.ts
 
 ---
 
@@ -46,17 +46,17 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 10 (FIRST - Must FAIL before implementation)
 
-- [x] T015a [P] [US10] Write contract test for /api/v1/me endpoint in backend/tests/contract/test_auth_me.py
-- [x] T015b [P] [US10] Write integration test for Google auth flow (user creation on first login) in backend/tests/integration/test_google_auth.py
+- [x] T015a [P] [US10] Write contract test for /api/v1/me endpoint in tests/contract/auth.test.ts
+- [x] T015b [P] [US10] Write integration test for Google auth flow (user creation on first login) in tests/integration/auth.test.ts
 
 ### Implementation for User Story 10
 
-- [x] T015 [P] [US10] Add Supabase client setup in frontend/src/services/supabaseClient.ts
-- [x] T016 [US10] Implement login/logout pages in frontend/src/app/(auth)/login/page.tsx and frontend/src/app/(auth)/logout/page.tsx
-- [x] T017 [US10] Implement /api/v1/me endpoint in backend/src/api/v1/auth.py
-- [x] T018 [US10] Add User model/schema/service in backend/src/models/user.py, backend/src/schemas/user.py, backend/src/services/user_service.py
-- [x] T019 [US10] Sync user profile on auth in backend/src/services/auth_service.py and backend/src/api/v1/auth.py
-- [x] T020 [US10] Add frontend auth guard + redirect logic in frontend/src/middleware.ts
+- [x] T015 [P] [US10] Add Supabase client setup in src/services/supabaseClient.ts
+- [x] T016 [US10] Implement login/logout pages in src/app/(auth)/login/page.tsx and src/app/(auth)/logout/page.tsx
+- [x] T017 [US10] Implement /api/v1/me endpoint in src/app/api/v1/me/
+- [x] T018 [US10] Add User model/schema/service in prisma/schema.prisma, src/lib/services/users.service.ts
+- [x] T019 [US10] Sync user profile on auth in src/app/api/v1/me/ and src/lib/services/
+- [x] T020 [US10] Add frontend auth guard + redirect logic in src/middleware.ts
 
 ---
 
@@ -68,18 +68,18 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 11 (FIRST - Must FAIL before implementation)
 
-- [x] T021a [P] [US11] Write contract test for role-gating in backend/tests/contract/test_rbac.py (verify student cannot access admin endpoints)
-- [x] T021b [P] [US11] Write integration test for role-based access enforcement in backend/tests/integration/test_rbac_enforcement.py
+- [x] T021a [P] [US11] Write contract test for role-gating in tests/contract/rbac.test.ts (verify student cannot access admin endpoints)
+- [x] T021b [P] [US11] Write integration test for role-based access enforcement in tests/integration/rbac.test.ts
 
 ### Implementation for User Story 11
 
-- [x] T021 [P] [US11] Add UserRole model/schema in backend/src/models/user_role.py and backend/src/schemas/user_role.py
-- [x] T022 [US11] Implement RBAC dependencies in backend/src/core/rbac.py and backend/src/services/role_service.py
-- [x] T023 [US11] Apply role guards in backend/src/api/v1/router.py
-- [x] T024 [US11] Add role-gated UI components in frontend/src/components/RoleGate.tsx and frontend/src/components/NavShell.tsx
-- [x] T025 [US11] Create role landing pages in frontend/src/app/super-admin/page.tsx, frontend/src/app/admin/page.tsx, frontend/src/app/instructor/page.tsx, frontend/src/app/student/page.tsx
-- [x] T025a [US11] Write contract test for equal admin permissions in backend/tests/contract/test_admin_equality.py (verify no admin has privilege that others don't)
-- [ ] T025b [US11] Write enforcement validation in backend/src/services/role_service.py to prevent admin permission hierarchy
+- [x] T021 [P] [US11] Add UserRole model/schema in prisma/schema.prisma and src/lib/services/
+- [x] T022 [US11] Implement RBAC dependencies in src/lib/middleware/rbac.ts and src/lib/services/roles.service.ts
+- [x] T023 [US11] Apply role guards in src/app/api/v1/ routes
+- [x] T024 [US11] Add role-gated UI components in src/components/RoleGate.tsx and src/components/NavShell.tsx
+- [x] T025 [US11] Create role landing pages in src/app/super-admin/page.tsx, src/app/admin/page.tsx, src/app/instructor/page.tsx, src/app/student/page.tsx
+- [x] T025a [US11] Write contract test for equal admin permissions in tests/contract/rbac.test.ts (verify no admin has privilege that others don't)
+- [ ] T025b [US11] Write enforcement validation in src/lib/services/role.service.ts to prevent admin permission hierarchy
 
 ---
 
@@ -91,17 +91,17 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 9 (FIRST - Must FAIL before implementation)
 
-- [x] T026a [P] [US9] Write contract test for tenant isolation in backend/tests/contract/test_tenant_isolation.py (verify admin A cannot access school B courses)
-- [x] T026b [P] [US9] Write integration test for row-level isolation enforcement in backend/tests/integration/test_tenant_isolation.py
+- [x] T026a [P] [US9] Write contract test for tenant isolation in tests/contract/tenancy.test.ts (verify admin A cannot access school B courses)
+- [x] T026b [P] [US9] Write integration test for row-level isolation enforcement in tests/integration/tenancy.test.ts
 
 ### Implementation for User Story 9
 
-- [x] T026 [P] [US9] Add School model/schema in backend/src/models/school.py and backend/src/schemas/school.py
-- [x] T027 [US9] Implement tenant scoping helpers in backend/src/core/tenancy.py and apply in services
-- [x] T028 [US9] Implement schools endpoints in backend/src/api/v1/schools.py
-- [x] T029 [US9] Add school context provider in frontend/src/services/schoolContext.tsx
-- [x] T030 [US9] Add school switcher UI in frontend/src/components/SchoolSwitcher.tsx
-- [x] T031 [US9] Create migration for schools/users/roles in backend/alembic/versions/0001_create_schools_users_roles.py
+- [x] T026 [P] [US9] Add School model/schema in prisma/schema.prisma and src/lib/schemas/school.ts
+- [x] T027 [US9] Implement tenant scoping helpers in src/lib/tenancy.ts and apply in services
+- [x] T028 [US9] Implement schools endpoints in src/app/api/v1/schools.ts
+- [x] T029 [US9] Add school context provider in src/services/schoolContext.tsx
+- [x] T030 [US9] Add school switcher UI in src/components/SchoolSwitcher.tsx
+- [x] T031 [US9] Create Prisma migrations for schools/users/roles via prisma/migrations/
 
 ---
 
@@ -113,17 +113,17 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 1 (FIRST - Must FAIL before implementation)
 
-- [x] T032a [P] [US1] Write contract test for syllabus CRUD in backend/tests/contract/test_syllabuses.py
-- [x] T032b [P] [US1] Write integration test for lesson ordering and syllabus visibility in backend/tests/integration/test_syllabuses.py
+- [x] T032a [P] [US1] Write contract test for syllabus CRUD in tests/contract/syllabuses.test.ts
+- [x] T032b [P] [US1] Write integration test for lesson ordering and syllabus visibility in tests/integration/syllabuses.test.ts
 
 ### Implementation for User Story 1
 
-- [x] T032 [P] [US1] Add Syllabus/Lesson models+schemas in backend/src/models/syllabus.py, backend/src/models/lesson.py, backend/src/schemas/syllabus.py
-- [x] T033 [US1] Add migration for syllabuses/lessons in backend/alembic/versions/0002_create_syllabuses_lessons.py
-- [x] T034 [US1] Implement syllabus service in backend/src/services/syllabus_service.py
-- [x] T035 [US1] Implement syllabus endpoints in backend/src/api/v1/syllabuses.py
-- [x] T036 [US1] Build super-admin syllabus UI in frontend/src/app/super-admin/syllabuses/page.tsx and frontend/src/components/SyllabusForm.tsx
-- [x] T037 [US1] Build admin syllabus browse UI in frontend/src/app/admin/syllabuses/page.tsx
+- [x] T032 [P] [US1] Add Syllabus/Lesson models+schemas in prisma/schema.prisma and src/lib/schemas/syllabus.ts
+- [x] T033 [US1] Add Prisma migration for syllabuses/lessons via prisma/migrations/
+- [x] T034 [US1] Implement syllabus service in src/lib/services/syllabus.service.ts
+- [x] T035 [US1] Implement syllabus endpoints in src/app/api/v1/syllabuses.ts
+- [x] T036 [US1] Build super-admin syllabus UI in src/app/super-admin/syllabuses/page.tsx and src/components/SyllabusForm.tsx
+- [x] T037 [US1] Build admin syllabus browse UI in src/app/admin/syllabuses/page.tsx
 
 ---
 
@@ -135,22 +135,22 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 ### Tests for User Story 2 (FIRST - Must FAIL before implementation)
 
-- [x] T038a [P] [US2] Write contract test for course creation and enrollment APIs in backend/tests/contract/test_courses_enrollments.py
-- [x] T038b [P] [US2] Write integration test for course workflow (create, enroll, approve, assign instructor) in backend/tests/integration/test_course_workflows.py
-- [x] T038c [P] [US2] Write integration test for overbooking conflict detection in backend/tests/integration/test_overbooking_prevention.py
+- [x] T038a [P] [US2] Write contract test for course creation and enrollment APIs in tests/contract/courses.test.ts
+- [x] T038b [P] [US2] Write integration test for course workflow (create, enroll, approve, assign instructor) in tests/integration/courses.test.ts
+- [x] T038c [P] [US2] Write integration test for overbooking conflict detection in tests/integration/overbooking.test.ts
 
 ### Implementation for User Story 2
 
-- [x] T038 [P] [US2] Add Course/CourseLesson/StudentEnrollment/InstructorAssignment models+schemas in backend/src/models/course.py, backend/src/models/course_lesson.py, backend/src/models/student_enrollment.py, backend/src/models/instructor_assignment.py, backend/src/schemas/course.py, backend/src/schemas/enrollment.py
-- [x] T039 [US2] Add migration for courses/lessons/enrollments/assignments in backend/alembic/versions/0003_create_courses_enrollments.py
-- [x] T040 [US2] Implement course creation service in backend/src/services/course_service.py
-- [x] T041 [US2] Implement enrollment workflow service in backend/src/services/enrollment_service.py
-- [x] T042 [US2] Implement instructor assignment service in backend/src/services/instructor_service.py
-- [x] T043 [US2] Implement courses API in backend/src/api/v1/courses.py and lessons API in backend/src/api/v1/course_lessons.py
-- [x] T044 [US2] Implement enrollments API in backend/src/api/v1/enrollments.py and instructors API in backend/src/api/v1/instructors.py
-- [ ] T045 [US2] Build admin course management UI in frontend/src/app/admin/courses/page.tsx and frontend/src/app/admin/courses/[courseId]/page.tsx
-- [ ] T046 [US2] Build enrollment approval UI in frontend/src/components/EnrollmentQueue.tsx
-- [ ] T047 [US2] Build instructor assignment UI in frontend/src/components/InstructorAssignmentForm.tsx
+- [x] T038 [P] [US2] Add Course/CourseLesson/StudentEnrollment/InstructorAssignment models+schemas in prisma/schema.prisma and src/lib/schemas/course.ts
+- [x] T039 [US2] Add Prisma migration for courses/lessons/enrollments/assignments via prisma/migrations/
+- [x] T040 [US2] Implement course creation service in src/lib/services/course.service.ts
+- [x] T041 [US2] Implement enrollment workflow service in src/lib/services/enrollment.service.ts
+- [x] T042 [US2] Implement instructor assignment service in src/lib/services/instructor.service.ts
+- [x] T043 [US2] Implement courses API in src/app/api/v1/courses.ts and lessons API in src/app/api/v1/course-lessons.ts
+- [x] T044 [US2] Implement enrollments API in src/app/api/v1/enrollments.ts and instructors API in src/app/api/v1/instructors.ts
+- [X] T045 [US2] Build admin course management UI in src/app/admin/courses/page.tsx and src/app/admin/courses/[courseId]/page.tsx
+- [X] T046 [US2] Build enrollment approval UI in src/components/EnrollmentQueue.tsx
+- [X] T047 [US2] Build instructor assignment UI in src/components/InstructorAssignmentForm.tsx
 
 ---
 
@@ -160,11 +160,11 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: A student enrolls in a course and sees lesson schedule and details.
 
-- [ ] T048 [P] [US3] Build course catalog page in frontend/src/app/student/courses/page.tsx
-- [ ] T049 [US3] Build student course detail page in frontend/src/app/student/courses/[courseId]/page.tsx
-- [ ] T050 [US3] Add enrollment API client in frontend/src/services/enrollments.ts
-- [ ] T051 [US3] Add student course listing schema in backend/src/schemas/schedule.py
-- [ ] T052 [US3] Extend courses API for student-visible listing in backend/src/api/v1/courses.py
+- [X] T048 [P] [US3] Build course catalog page in src/app/student/courses/page.tsx
+- [X] T049 [US3] Build student course detail page in src/app/student/courses/[courseId]/page.tsx
+- [X] T050 [US3] Add enrollment API client in src/services/enrollments.ts
+- [X] T051 [US3] Add student course listing schema in src/lib/schemas/schedule.ts
+- [X] T052 [US3] Extend courses API for student-visible listing in src/app/api/v1/courses.ts
 
 ---
 
@@ -174,13 +174,13 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Instructor submits evaluations for a lesson; students are updated accordingly.
 
-- [ ] T053 [P] [US4] Add StudentLessonEvaluation model/schema in backend/src/models/student_lesson_evaluation.py and backend/src/schemas/evaluation.py
-- [ ] T054 [US4] Add migration for evaluations in backend/alembic/versions/0004_create_student_lesson_evaluations.py
-- [ ] T055 [US4] Implement evaluation service in backend/src/services/evaluation_service.py
-- [ ] T056 [US4] Implement evaluation endpoints in backend/src/api/v1/evaluations.py
-- [ ] T057 [US4] Implement lesson completion endpoint in backend/src/api/v1/course_lessons.py
-- [ ] T058 [US4] Build instructor schedule UI in frontend/src/app/instructor/schedule/page.tsx
-- [ ] T059 [US4] Build lesson detail + evaluation form UI in frontend/src/app/instructor/lessons/[lessonId]/page.tsx and frontend/src/components/EvaluationForm.tsx
+- [X] T053 [P] [US4] Add StudentLessonEvaluation model/schema in prisma/schema.prisma and src/lib/schemas/evaluation.ts
+- [X] T054 [US4] Add Prisma migration for evaluations via prisma/migrations/
+- [X] T055 [US4] Implement evaluation service in src/lib/services/evaluation.service.ts
+- [X] T056 [US4] Implement evaluation endpoints in src/app/api/v1/evaluations.ts
+- [X] T057 [US4] Implement lesson completion endpoint in src/app/api/v1/course-lessons.ts
+- [X] T058 [US4] Build instructor schedule UI in src/app/instructor/schedule/page.tsx
+- [X] T059 [US4] Build lesson detail + evaluation form UI in src/app/instructor/lessons/[lessonId]/page.tsx and src/components/EvaluationForm.tsx
 
 ---
 
@@ -190,9 +190,9 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Admin cannot assign instructor to overlapping lesson; conflict details displayed.
 
-- [ ] T060 [US5] Implement overbooking query in backend/src/services/instructor_service.py
-- [ ] T061 [US5] Add conflict response schema in backend/src/schemas/conflict.py
-- [ ] T062 [US5] Surface conflict UI in frontend/src/components/InstructorAssignmentForm.tsx
+- [ ] T060 [US5] Implement overbooking query in src/lib/services/instructor.service.ts
+- [ ] T061 [US5] Add conflict response schema in src/lib/schemas/conflict.ts
+- [ ] T062 [US5] Surface conflict UI in src/components/InstructorAssignmentForm.tsx
 
 ---
 
@@ -202,8 +202,8 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Key workflows operate on 375px and 1920px screens without missing features.
 
-- [ ] T063 [US12] Apply responsive layout updates in frontend/src/components/NavShell.tsx and frontend/src/components/ResponsiveTable.tsx
-- [ ] T064 [US12] Add touch-friendly controls in frontend/src/components/EvaluationForm.tsx and frontend/src/components/EnrollmentQueue.tsx
+- [ ] T063 [US12] Apply responsive layout updates in src/components/NavShell.tsx and src/components/ResponsiveTable.tsx
+- [ ] T064 [US12] Add touch-friendly controls in src/components/EvaluationForm.tsx and src/components/EnrollmentQueue.tsx
 
 ---
 
@@ -213,10 +213,10 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Completion of lessons updates progress percentage and status.
 
-- [ ] T065 [US6] Add progress schema in backend/src/schemas/progress.py
-- [ ] T066 [US6] Implement progress service in backend/src/services/progress_service.py
-- [ ] T067 [US6] Add progress endpoint in backend/src/api/v1/progress.py
-- [ ] T068 [US6] Display progress UI in frontend/src/components/CourseProgress.tsx and course pages
+- [ ] T065 [US6] Add progress schema in src/lib/schemas/progress.ts
+- [ ] T066 [US6] Implement progress service in src/lib/services/progress.service.ts
+- [ ] T067 [US6] Add progress endpoint in src/app/api/v1/progress.ts
+- [ ] T068 [US6] Display progress UI in src/components/CourseProgress.tsx and course pages
 
 ---
 
@@ -226,9 +226,9 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Lesson schedule and evaluation submission trigger emails.
 
-- [ ] T069 [US7] Add Resend client wrapper in backend/src/services/notification_service.py
-- [ ] T070 [US7] Add email templates in backend/src/templates/emails/lesson_scheduled.html and backend/src/templates/emails/evaluation_submitted.html
-- [ ] T071 [US7] Trigger notifications in backend/src/services/course_service.py and backend/src/services/evaluation_service.py
+- [ ] T069 [US7] Add Resend client wrapper in src/lib/services/notification.service.ts
+- [ ] T070 [US7] Add email templates in src/templates/emails/lesson-scheduled.html and src/templates/emails/evaluation-submitted.html
+- [ ] T071 [US7] Trigger notifications in src/lib/services/course.service.ts and src/lib/services/evaluation.service.ts
 
 ---
 
@@ -238,8 +238,8 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: A course created from a prior final version matches that version’s lessons exactly.
 
-- [ ] T072 [US8] Update course creation UI to allow selecting any final syllabus version in frontend/src/app/admin/courses/new/page.tsx
-- [ ] T073 [US8] Validate selected syllabus version is final in backend/src/services/course_service.py
+- [ ] T072 [US8] Update course creation UI to allow selecting any final syllabus version in src/app/admin/courses/new/page.tsx
+- [ ] T073 [US8] Validate selected syllabus version is final in src/lib/services/course.service.ts
 
 ---
 
@@ -249,7 +249,7 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Independent Test**: Developers can locate integration interfaces and add a stub provider.
 
-- [ ] T075 [US13] Add integration interfaces in backend/src/integrations/base.py and backend/src/integrations/payment_provider.py
+- [ ] T075 [US13] Add integration interfaces in src/lib/integrations/base.ts and src/lib/integrations/payment-provider.ts
 - [ ] T076 [US13] Document extension points in docs/architecture.md
 
 ---
@@ -268,25 +268,25 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 
 **Purpose**: Address requirements not covered by primary user story phases. These tasks support P1 stories with critical features.
 
-- [ ] T083 [US2] Add FR-025 (auto-enroll waitlist when similar course created) service in backend/src/services/enrollment_service.py with FIFO promotion logic
-- [ ] T084 [US11] Add FR-027 (prevent last-admin deletion) validation in backend/src/services/role_service.py and enforce via API in backend/src/api/v1/schools.py
-- [ ] T085 [P] [US10] Add FR-022 (super-admin system settings) model in backend/src/models/settings.py and endpoint in backend/src/api/v1/system_settings.py
-- [ ] T086 [P] [US13] Add stub interfaces for FR-019 (social media integration) in backend/src/integrations/social_provider.py
-- [ ] T087 [P] [US13] Add stub interfaces for FR-020 (instant messaging integration) in backend/src/integrations/messaging_provider.py
-- [ ] T088 [US4] Add backend endpoint GET /api/v1/instructors/{instructor_id}/schedule in backend/src/api/v1/instructors.py (FR-011 support)
-- [ ] T089 [P] Add performance verification hooks for SC-005 (email delivery within 5 min) in backend/src/services/notification_service.py with timestamp logging
-- [ ] T090 [P] Add performance verification hooks for SC-001 (auth + dashboard within 30 s) in frontend/src/middleware.ts and backend response timing
-- [ ] T091 [P] Add performance verification hooks for SC-006 (page load < 3 s on mobile) in frontend/src/app/layout.tsx with web-vital metrics
+- [ ] T083 [US2] Add FR-025 (auto-enroll waitlist when similar course created) service in src/lib/services/enrollment.service.ts with FIFO promotion logic
+- [ ] T084 [US11] Add FR-027 (prevent last-admin deletion) validation in src/lib/services/role.service.ts and enforce via API in src/app/api/v1/schools.ts
+- [ ] T085 [P] [US10] Add FR-022 (super-admin system settings) model in prisma/schema.prisma and endpoint in src/app/api/v1/settings.ts
+- [ ] T086 [P] [US13] Add stub interfaces for FR-019 (social media integration) in src/lib/integrations/social-provider.ts
+- [ ] T087 [P] [US13] Add stub interfaces for FR-020 (instant messaging integration) in src/lib/integrations/messaging-provider.ts
+- [ ] T088 [US4] Add backend endpoint GET /api/v1/instructors/{instructor_id}/schedule in src/app/api/v1/instructors.ts (FR-011 support)
+- [ ] T089 [P] Add performance verification hooks for SC-005 (email delivery within 5 min) in src/lib/services/notification.service.ts with timestamp logging
+- [ ] T090 [P] Add performance verification hooks for SC-001 (auth + dashboard within 30 s) in src/middleware.ts and backend-node response timing
+- [ ] T091 [P] Add performance verification hooks for SC-006 (page load < 3 s on mobile) in src/app/layout.tsx with web-vital metrics
 
 ---
 
 ## Phase 18: Polish & Cross-Cutting Concerns
 
-- [ ] T078 [P] Update OpenAPI metadata and response envelope docs in backend/src/main.py
-- [ ] T079 [P] Add seed utilities in backend/src/services/seed.py and Makefile
+- [ ] T078 [P] Update API documentation and response envelope docs in src/lib/server.ts and src/lib/responses.ts
+- [ ] T079 [P] Add seed utilities in src/lib/services/seed.service.ts and Makefile
 - [ ] T080 [P] Add deployment configs in infra/render.yaml and infra/vercel.json
 - [ ] T081 [P] Validate quickstart steps and update specs/001-school-management-system/quickstart.md
-- [ ] T082 [P] Update developer docs in docs/README.md
+- [x] T082 [P] Update developer docs in docs/README.md
 
 ---
 

@@ -87,10 +87,10 @@ Tests are written and reviewed **before** implementation begins. No pull request
 introducing business logic will be merged without prior failing tests.
 
 - Red-Green-Refactor cycle is strictly enforced for all domain services.
-- Coverage gate: ≥ 80% line coverage on `backend/src/` at merge time.
+- Coverage gate: ≥ 80% line coverage on `src/` at merge time.
 - Integration tests MUST cover at minimum: booking conflict detection, certificate
   expiry checks, and role-based access control enforcement.
-- Tests MUST be runnable with a single command (`make test`) in CI and locally.
+- Tests MUST be runnable with a single command (`npm test`) in CI and locally.
 
 **Rationale**: Booking and compliance errors in a flight school have real safety
 consequences; catching them via automated tests before production is non-negotiable.
@@ -103,7 +103,7 @@ data). Security controls are mandatory, not optional.
 - **Authentication**: delegated entirely to **Supabase Auth** with **Google OIDC**
   as the identity provider. No custom password storage or session management.
   Users authenticate via Google; Supabase issues short-lived JWTs (default ≤ 1h)
-  that the FastAPI backend verifies against Supabase's public JWKS endpoint.
+  that the Next.js backend verifies against Supabase's public JWKS endpoint.
 - **No server-side sessions**: the system is stateless. Every API request MUST
   carry an `Authorization: Bearer <jwt>` header. No cookies, no session store.
 - **Authorisation**: role-based access control with four roles (`super_admin`,
@@ -141,42 +141,49 @@ Confusing them causes wasted debugging time and false confidence in incorrect co
 - Example: `AssertionError: 422 != 201` (endpoint returns Unprocessable Entity instead of created)
 - Gate: FAILURE tests are **expected** and drive development; TDD promises them
 
-**Fixture Architecture**: FastAPI's `app.dependency_overrides` is a global singleton,
-not request-scoped. Multiple concurrent fixtures overwriting the same override cause
-conflicts. Solution: two-tier fixture design.
+**Fixture Architecture**: Vitest's test context is isolated per test. Multiple tests
+can run concurrently without conflicts. Solution: context-based fixture design.
 
-*Tier 1 — Dedicated client fixtures* for single-user tests (90% of cases):
-```python
-@pytest_asyncio.fixture
-async def admin_client(db: AsyncSession, admin_user: User) -> AsyncGenerator[AsyncClient, None]:
-    async def override_get_db():
-        yield db
-    async def override_get_current_user() -> User:
-        return admin_user
-    
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
-    
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        yield ac
-    
-    app.dependency_overrides.clear()
+*Test Context Fixtures* for single-user tests (90% of cases):
+```typescript
+async function createAuthenticatedContext(user: User) {
+  const token = await createTestJWT(user);
+  return {
+    headers: { Authorization: `Bearer ${token}` },
+    user
+  };
+}
+
+test('admin can create school', async () => {
+  const { headers } = await createAuthenticatedContext(adminUser);
+  const response = await fetch('/api/v1/schools', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ name: 'Test School' })
+  });
+  expect(response.status).toBe(201);
+});
 ```
 
-*Tier 2 — Factory fixtures* with async context managers for multi-user workflows:
-```python
-@pytest_asyncio.fixture
-async def client_factory(db: AsyncSession) -> Callable:
-    async def create_client(user: User) -> AsyncGenerator[AsyncClient, None]:
-        async def override_get_current_user() -> User:
-            return user
-        
-        app.dependency_overrides[get_current_user] = override_get_current_user
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            yield ac
-        app.dependency_overrides.clear()
-    
-    return create_client
+*Factory fixtures* for multi-user workflows:
+```typescript
+function createClientFactory(db: PrismaClient) {
+  return async function(user: User) {
+    const token = await createTestJWT(user);
+    return {
+      async request(url: string, options: RequestInit = {}) {
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            Authorization: `Bearer ${token}`
+          }
+        });
+      }
+    };
+  };
+}
+```
 
 # Usage in test:
 async with client_factory(admin_user) as admin_client:
@@ -203,24 +210,24 @@ db (session)
 
 **Model Truth Principle**: Tests are subordinate to the data model, not vice versa.
 - All assertions about structure (columns, relationships, type constraints) MUST
-  reflect the actual models in `src/models/`.
+  reflect the actual models in `prisma/schema.prisma`.
 - When a test assumes a field name or type that doesn't exist, the test is wrong,
   not the model.
 - Example: if `Course.name` exists but test uses `Course.title`, the test MUST
   be fixed immediately.
 
-**Static Analysis Before Dynamic Testing**: Pylance/Pyright catch structural errors
-(imports, types, unexpected attributes) in 0.1s; pytest takes 1.6s and obscures
+**Static Analysis Before Dynamic Testing**: TypeScript compiler catches structural errors
+(imports, types, unexpected attributes) in 0.1-2s; Vitest takes longer and obscures
 the root cause in a runtime stack trace.
 
 Workflow:
 1. Edit files
-2. Run `pylance check src/ tests/` (0.1s) — catches import errors, type mismatches, invalid kwargs
+2. Run `npm run type-check` (TypeScript compiler) — catches import errors, type mismatches, invalid params
 3. Fix all reported issues
-4. Run `pytest tests/` (1.6s) — verifies behavior and integration
+4. Run `npm test` (Vitest) — verifies behavior and integration
 5. Commit
 
-Skipping step 2 guarantees multiple pytest iterations per issue.
+Skipping step 2 guarantees multiple test iterations per issue.
 
 **TDD Phases** (strictly sequential):
 - **Phase 1**: Contracts written; tests exist in `tests/contract/` with failing assertions
@@ -311,67 +318,59 @@ amendment to this section with documented justification.
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Backend language | Python 3.12 | Rich aviation/data libraries, fast development cycle |
-| API framework | FastAPI | Async-native, auto-OpenAPI docs, Pydantic validation |
-| Frontend | Next.js 14 (React) | SSR, excellent DX, Vercel push-to-deploy |
+| Full-stack framework | Next.js 14 + TypeScript | Unified frontend and API routes, SSR, excellent DX |
+| API validation | Zod + TypeScript | Type-safe validation, unified frontend/backend types |
 | Database | PostgreSQL 16 via Supabase | Managed, free tier, built-in auth |
-| ORM / migrations | SQLAlchemy 2 + Alembic | Mature, async-compatible, strong migration support |
+| ORM / migrations | Prisma 5 | Type-safe, excellent DX, built-in migrations |
+| JWT verification | jose library | JWKS support, lightweight, Node.js standard |
 | Auth | Supabase Auth (Google OIDC) | Zero config Google login; JWKS JWT verification; no sessions |
-| Object storage | Cloudflare R2 | Zero egress fees; S3-compatible `boto3` SDK |
+| Object storage | Cloudflare R2 | Zero egress fees; S3-compatible SDK |
 | Email | Resend | 3k/month free; single API call; excellent deliverability |
 | Frontend hosting | Vercel | Free Hobby; GitHub push-to-deploy; preview environments |
-| Backend hosting | Render | Free tier (Tier 0); Starter $7/mo (Tier 1+) |
-| CI/CD | GitHub Actions | Free for public repos; deploys to Vercel + Render on merge |
-| Backend tests | pytest + httpx | Standard, well-documented async test support |
+| Hosting | Vercel | Free tier (Tier 0); Pro $20/mo (Tier 1+) |
+| CI/CD | GitHub Actions | Free for public repos; deploys to Vercel on merge |
+| Backend tests | Vitest | Modern, fast, TypeScript-first test framework |
 | E2E tests | Playwright | Cross-browser; integrates with GitHub Actions |
-| Logging (Tier 0) | Render / Supabase / Vercel dashboards | Built-in, zero setup, free |
+| Logging (Tier 0) | Vercel / Supabase dashboards | Built-in, zero setup, free |
 | Logging (Tier 1+) | Betterstack Logtail or Axiom | Structured search, free tier available |
 
 **Current scale assumptions** (proof-of-concept / Tier 0):
 < 20 concurrent users · < 1 GB database · single school tenant · fully free hosting.
 
 **External integration extensibility**: the stack imposes no restrictions on
-integrating third-party services. The FastAPI backend is a stateless HTTP
+integrating third-party services. The Next.js backend is a stateless serverless
 process with no vendor SDK lock-in; any external API is reachable via standard
-async `httpx` calls. Inbound webhooks are plain HTTP POST endpoints. The only
-operational constraint is the Render free-tier cold start for inbound webhooks
-(resolved at Tier 1 — see Principle V). Scheduled polling tasks use APScheduler
-(Tier 0) or Supabase pg_cron (Tier 1+).
+`fetch` calls. Inbound webhooks are plain HTTP POST endpoints. Scheduled polling
+tasks use Vercel Cron Jobs (Tier 1+) or Supabase pg_cron.
 
 **Observability & Logging**
 
-All application logs MUST be structured JSON emitted to `stdout`/`stderr`.
+All application logs MUST be structured JSON emitted to `console.log`/`console.error`.
 Every log entry that relates to an API request MUST include the `request_id`
 field (see Principle II) to enable cross-service correlation.
 
-*Backend (FastAPI / Render)*: Python `logging` module configured with a JSON
-formatter; Render captures `stdout`/`stderr` and exposes them in the Render
-dashboard (7-day retention on free tier; live-tail available). No log agent to
-install.
+*Backend (Next.js / Vercel)*: Vercel Functions tab captures server-side logs
+per invocation; filterable by function, status code, and time range. Free tier
+retains 1 hour (Pro: 1 day). Console logs are automatically captured.
 
 *Database & Auth (Supabase)*: Supabase Logs Explorer provides pre-categorised
 views — API, Auth, Postgres, Storage — each filterable by `request_id`,
 status code, and time range. Free tier retains 1 day; Pro retains 7 days.
 
-*Frontend (Next.js / Vercel)*: Vercel Functions tab captures server-side logs
-per invocation. Free tier retains 1 hour (Pro: 1 day). Client-side JS errors
-are NOT captured — add **Sentry** (free tier) at Tier 1 for real-user monitoring.
+*Client-side monitoring (Tier 1+)*: add **Sentry** (free tier) for real-user
+monitoring and error tracking.
 
-*Structured log search (Tier 1+)*: pipe Render log drain to **Betterstack
+*Structured log search (Tier 1+)*: pipe Vercel log drain to **Betterstack
 Logtail** or **Axiom** (both free up to generous limits) for full-text search,
 alerting, and retention beyond platform defaults.
 
 *Standard debugging workflow*:
 1. Identify approximate time and affected user from the report.
 2. Supabase Auth logs → locate the session → copy `request_id`.
-3. Render logs → filter by `request_id` → read FastAPI exception + stack trace.
+3. Vercel logs → filter by function and time → read Next.js exception + stack trace.
 4. Supabase Postgres logs → find the failing query → identify constraint or
    timeout.
-5. Vercel logs → confirm what the frontend sent and received.
-
-*Tier 0 caveat*: Render free instances pause after 15 min of inactivity; wake
-the instance by hitting the app URL before attempting to reproduce an issue
-and live-tail logs.
+5. Browser DevTools → confirm what the frontend sent and received.
 
 **Planned future modules** (not yet in scope; require separate feature specs):
 - *Payments*: Stripe (credit/debit cards) + PayPal; client-side tokenisation
@@ -392,12 +391,12 @@ and live-tail logs.
 - *Repair workflow*: repair requests, technician assignments, parts tracking,
   return-to-service sign-off.
 
-**Repository layout** (monorepo):
+**Repository layout** (unified full-stack):
 
 ```text
-backend/    # FastAPI application (src/, tests/)
-frontend/   # Next.js application (src/, tests/)
-infra/      # Vercel vercel.json, Render render.yaml, Supabase CLI migrations
+src/        # Next.js application (app/, lib/, components/)
+tests/      # All tests (unit, contract, integration, e2e)
+prisma/     # Prisma schema and migrations
 docs/       # ADRs, data-model diagrams, API changelog
 ```
 
@@ -408,25 +407,23 @@ docs/       # ADRs, data-model diagrams, API changelog
 - **Pull requests**: MUST reference a spec (`specs/###-*/spec.md`).
   MUST include a filled Constitution Check section in the linked plan.
 - **Local development cycle**:
-  1. Edit Python/TypeScript files
-  2. Run `pylance check src/ tests/` (static analysis, 0.1s)
-  3. Fix all reported import errors, type mismatches, unexpected attributes
-  4. Run `pytest tests/` or `npm test` (dynamic testing, 1.6–10s)
+  1. Edit TypeScript files
+  2. Run `npm run type-check` (static analysis, TypeScript compiler)
+  3. Fix all reported type errors, import errors, unexpected attributes
+  4. Run `npm test` (dynamic testing)
   5. Fix failing tests by implementing features (Phase 3) or fixtures (Phase 2)
   6. Commit once all checks pass
   
-  Skipping step 2 guarantees multiple pytest iterations on the same structural issue.
+  Skipping step 2 guarantees multiple test iterations on the same structural issue.
 - **CI gates** (ALL MUST pass before merge):
-  1. `make lint` — ruff + mypy (backend), ESLint (frontend).
-  2. `make test` — pytest coverage ≥ 80%, Playwright smoke suite.
-  3. `make build` — production build succeeds without warnings.
-- **Deployment**: Vercel auto-deploys `main` (frontend) and Render auto-deploys
-  `main` (backend) on every push via GitHub integration. Feature branches deploy
-  to Vercel preview environments automatically.
+  1. `npm run lint` — ESLint + Prettier.
+  2. `npm test` — Vitest coverage ≥ 80%, Playwright smoke suite.
+  3. `npm run build` — production build succeeds without warnings.
+- **Deployment**: Vercel auto-deploys `main` on every push via GitHub integration.
+  Feature branches deploy to Vercel preview environments automatically.
 - **Database & Data Migrations**: all schema and data changes are managed through
-  the same versioned pipeline — Alembic for backend models, Supabase CLI for
-  Supabase-managed objects. Both run via `make migrate` in the deploy pipeline.
-  Manual SQL changes to production are forbidden.
+  Prisma migrations. Both schema and data changes run via `npm run prisma:migrate`
+  in the deploy pipeline. Manual SQL changes to production are forbidden.
 
   *Schema migrations (DDL)*: column additions, table renames, index changes.
   MUST be backwards-compatible (see Principle I) unless a MAJOR version bump is
@@ -434,7 +431,7 @@ docs/       # ADRs, data-model diagrams, API changelog
 
   *Data migrations (DML)*: row backfills, data reshaping, reference/seed data
   loading, destructive cleanups. Rules:
-  - MUST live in versioned Alembic migration scripts alongside the DDL that
+  - MUST live in Prisma migration SQL files alongside the DDL that
     necessitates them — never in ad-hoc scripts or applied out-of-band.
   - Every data migration MUST be **idempotent**: safe to run multiple times
     without producing duplicate or inconsistent results.

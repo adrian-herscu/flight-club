@@ -1,7 +1,8 @@
 # Quickstart: School Management System
 
 **Feature**: `001-school-management-system`  
-**Date**: 24 February 2026
+**Date**: 24 February 2026  
+**Status**: ✅ Unified Full-Stack Next.js Architecture
 
 ---
 
@@ -9,11 +10,9 @@
 
 | Tool | Min Version | Install |
 |------|-------------|---------|
-| Python | 3.12 | `pyenv install 3.12` |
 | Node.js | 20 LTS | `nvm install 20` |
 | Docker | 24+ | [docker.com](https://docker.com) |
 | Supabase CLI | 1.x | `brew install supabase/tap/supabase` |
-| Make | any | pre-installed on Linux/macOS |
 
 ---
 
@@ -21,11 +20,12 @@
 
 ```
 flight-club/
-├── backend/       # FastAPI (Python 3.12)
-├── frontend/      # Next.js 14
-├── infra/         # Supabase CLI migrations, Render/Vercel configs
+├── src/           # Unified Next.js app (frontend + API routes)
+├── tests/         # All tests at root level
+├── prisma/        # Prisma schema
+├── scripts/       # Helper scripts
 ├── docs/          # ADRs, diagrams
-└── Makefile       # Single entry-point for all dev commands
+└── package.json   # Single entry-point for all commands
 ```
 
 ---
@@ -35,169 +35,164 @@ flight-club/
 ```bash
 git clone https://github.com/your-org/flight-club.git
 cd flight-club
-git checkout 001-school-management-system
-```
 
----
-
-## 2. Backend Setup
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt        # FastAPI, SQLAlchemy, Alembic, etc.
-pip install -r requirements-dev.txt    # pytest, httpx, ruff, mypy
-```
-
-### Environment Variables
-
-Copy `.env.example` to `.env` and fill in:
-
-```bash
-cp .env.example .env
-```
-
-```dotenv
-# .env (backend)
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:54322/postgres
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_ANON_KEY=<anon-key>
-SUPABASE_JWT_SECRET=<jwt-secret>          # from Supabase project settings
-RESEND_API_KEY=re_...                     # from resend.com dashboard
-FRONTEND_URL=http://localhost:3000
-```
-
-### Start Supabase Locally
-
-```bash
-supabase start          # starts local Postgres + Auth on port 54322
-make migrate            # runs Alembic migrations
-make seed               # loads reference/seed data
-```
-
-### Run Backend
-
-```bash
-cd backend
-uvicorn src.main:app --reload --port 8000
-```
-
-API docs available at: [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
-
-## 3. Frontend Setup
-
-```bash
-cd frontend
+# Install dependencies
 npm install
 ```
 
-### Environment Variables
+---
+
+## 2. Setup Supabase & Database
 
 ```bash
-cp .env.local.example .env.local
+# Start local Supabase (Postgres + Auth)
+supabase start
+
+# Run migrations
+npx prisma migrate dev
+
+# Optional: Load seed data
+npm run seed  # (if seed script exists)
 ```
+
+---
+
+## 3. Environment Configuration
+
+Create `.env.local` in the project root:
 
 ```dotenv
-# .env.local (frontend)
+# Database (from Supabase)
+DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
+
+# Supabase Auth (from `supabase start` output)
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<local-anon-key>   # output of `supabase start`
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<local-anon-key>
+
+# API URL (unified - same server)
+NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
-### Run Frontend
+---
+
+## 4. Run Development Server
 
 ```bash
 npm run dev
-# → http://localhost:3000
+# → http://localhost:3000 (Frontend + API Routes)
 ```
+
+API endpoints available at `/api/v1/*`  
+API health check: [http://localhost:3000/api/v1/health](http://localhost:3000/api/v1/health)
 
 ---
 
-## 4. Running Tests
+## 5. Running Tests
 
 ```bash
-# All tests (CI-equivalent)
-make test
+# All tests (unit + contract tests, no server needed)
+npm test
 
-# Backend unit + integration tests only
-cd backend && pytest --cov=src --cov-report=term-missing
+# Watch mode
+npm run test:watch
 
-# E2E (requires both backend + frontend running)
-cd frontend && npx playwright test
+# Visual UI
+npm run test:ui
+
+# Integration/E2E tests (auto-starts dev server)
+npm run test:e2e
+
+# With coverage
+npm test -- --coverage
 ```
 
-**Coverage gate**: `make test` fails if backend line coverage < 80%.
-
----
-
-## 5. Make Commands
-
-| Command | Description |
-|---------|-------------|
-| `make test` | Run all tests (lint + pytest + playwright) |
-| `make lint` | ruff + mypy (backend), ESLint (frontend) |
-| `make build` | Production build check |
-| `make migrate` | Run Alembic migrations against local DB |
-| `make seed` | Load reference/seed data |
-| `make format` | Auto-format backend (ruff) + frontend (prettier) |
+**Test Organization:**
+- `tests/sample.test.ts` - Unit tests (run without server)
+- `tests/contract/` - API route handler tests (run without server)
+- `tests/integration/` - Full-stack API tests (auto-start server)
+- `tests/e2e/` - User workflow tests (auto-start server)
 
 ---
 
 ## 6. First-Time User Flow (Development)
 
 1. Open [http://localhost:3000](http://localhost:3000).
-2. Click **Sign in with Google** — redirects to Supabase local Auth (Google OIDC via configured OAuth app).
-3. On first login, a `User` record is created. No roles are assigned yet.
-4. To bootstrap a super-admin, run:
+2. Click **Sign in with Google** → redirects to Supabase local Auth.
+3. On first login, a `User` record is auto-created in the database.
+4. To bootstrap a super-admin:
    ```bash
-   make seed-superadmin EMAIL=your@email.com
+   npx prisma studio
+   # Manually create UserRole: userId, roleType: SUPER_ADMIN, schoolId: null
    ```
-5. Log in again — you should see the super-admin dashboard.
-6. From the super-admin dashboard:
+5. Log in again → should see super-admin dashboard.
+6. From super-admin dashboard:
    - Create a school (e.g., "Sky High School").
    - Create a syllabus with lessons.
-   - Assign a school admin role to another user.
-7. Log in as school admin → create a course → assign instructor → enroll student.
+   - Assign school-admin role to another user.
+7. Log in as school-admin → create course → assign instructor → enroll student.
 
 ---
 
 ## 7. Deployment (Tier 0)
 
-### Backend → Render (Free)
-
-1. Connect Render to the GitHub repo.
-2. Set **Root Directory** to `backend/`.
-3. Set **Build Command**: `pip install -r requirements.txt && alembic upgrade head`.
-4. Set **Start Command**: `uvicorn src.main:app --host 0.0.0.0 --port $PORT`.
-5. Add environment variables (same as `.env` above, pointing to Supabase cloud project).
-
-### Frontend → Vercel (Hobby)
+### Full-Stack → Vercel
 
 1. Import GitHub repo in Vercel dashboard.
-2. Set **Root Directory** to `frontend/`.
-3. Add environment variables from `.env.local` above (pointing to Supabase cloud project).
-4. Every push to `main` auto-deploys. PRs get preview URLs.
-
-### Database + Auth → Supabase (Free)
-
-1. Create a Supabase project at [supabase.com](https://supabase.com).
-2. Enable Google OAuth under **Authentication → Providers**.
-3. Run migrations via Supabase CLI: `supabase db push` (or `make migrate` with `DATABASE_URL` pointing to cloud DB).
-4. Commit `infra/supabase/` to version control.
+2. Set **Build Command**:
+   ```bash
+   npm install && npm run build
+   ```
+3. Set **Start Command**:
+   ```bash
+   npm start
+   ```
+4. Set **Environment Variables**:
+   - `DATABASE_URL` - Supabase cloud DB URL
+   - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
+   - `NEXT_PUBLIC_API_URL` - Production API URL (e.g., https://your-app.vercel.app)
 
 ---
 
-## 8. Key URLs (local)
+## 8. Troubleshooting
+
+**Tests fail with "fetch failed"?**
+- Make sure dev server is running: `npm run dev` in a separate terminal
+
+**Port 3000 already in use?**
+- Kill the process: `lsof -ti:3000 | xargs kill -9`
+- Or start on different port: `PORT=3001 npm run dev`
+
+**Database connection fails?**
+- Check Supabase is running: `supabase status`
+- Verify DATABASE_URL in .env.local matches your local Supabase setup
+2. Set **Root Directory** to `frontend/`.
+3. Add **Environment Variables**:
+   - `NEXT_PUBLIC_SUPABASE_URL` - Supabase cloud URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
+   - `NEXT_PUBLIC_API_URL` - Render backend URL
+
+### Database + Auth → Supabase (Free)
+
+1. Create Supabase project at [supabase.com](https://supabase.com).
+2. Enable **Google OAuth** under Authentication → Providers.
+3. Create database tables (Prisma migrations):
+   ```bash
+   # Use Supabase connection string in prisma/.env
+   npx prisma migrate deploy
+   ```
+4. Update frontend OAuth redirect URIs to include Vercel URL.
+
+---
+
+## 8. Key URLs (Local)
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
-| API Docs (Swagger) | http://localhost:8000/docs |
-| API Docs (ReDoc) | http://localhost:8000/redoc |
+| Frontend + API | http://localhost:3000 |
+| API Routes | /api/v1/* |
+| API Health | http://localhost:3000/api/v1/health |
+| Prisma Studio | run `npx prisma studio` |
 | Supabase Studio | http://localhost:54323 |
 
 ---
@@ -206,7 +201,9 @@ cd frontend && npx playwright test
 
 | Issue | Fix |
 |-------|-----|
-| Render free tier cold start (15 min) | Hit the backend URL directly to wake it before testing |
-| JWT verification fails locally | Confirm `SUPABASE_JWT_SECRET` matches the Supabase local instance secret (`supabase status`) |
-| Google OAuth redirect error | Ensure `http://localhost:3000` is in your Google OAuth app's Authorized Redirect URIs |
-| Migration fails | Run `alembic history` to check state; `alembic downgrade -1` to roll back one step |
+| Backend won't start | Ensure `DATABASE_URL` is set and database is accessible; check Node.js version ≥ 20 |
+| Prisma Client not found | Run `npx prisma generate` |
+| JWT verification fails | Confirm `SUPABASE_JWT_SECRET` matches Supabase instance (check `supabase status`) |
+| Google OAuth fails | Add `http://localhost:3000` to Supabase Google OAuth redirect URIs |
+| Database migration fails | Check `DATABASE_URL` connection; run `npx prisma db execute --stdin < /dev/null` |
+| Tests failing | Clear cache: `rm -rf node_modules/.vite`; reinstall: `npm install` |

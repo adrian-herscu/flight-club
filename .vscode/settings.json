@@ -10,49 +10,6 @@
         ".specify/scripts/bash/": true,
         ".specify/scripts/powershell/": true
     },
-    // Python test configuration
-    "python.testing.pytestEnabled": true,
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestArgs": [
-        "tests",
-        "-v",
-        "--tb=short",
-        "--ignore=tests/integration/test_tenant_isolation.py"
-    ],
-    "python.testing.cwd": "${workspaceFolder}/backend",
-    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-    // Pylance strict mode configuration
-    "python.analysis.typeCheckingMode": "strict",
-    "python.analysis.diagnosticSeverityOverrides": {
-        "reportUnusedVariable": "warning",
-        "reportUnusedImport": "warning",
-        "reportGeneralTypeIssues": "error",
-        "reportOptionalSubscript": "error",
-        "reportOptionalMemberAccess": "warning",
-        "reportOptionalOperand": "error",
-        "reportUnknownMemberType": "warning",
-        "reportUnknownArgumentType": "warning",
-        "reportUnknownVariableType": "warning",
-        "reportMissingTypeArgument": "warning"
-    },
-    "python.analysis.include": [
-        "${workspaceFolder}/backend/src"
-    ],
-    "python.analysis.exclude": [
-        "**/node_modules",
-        "**/__pycache__",
-        "**/.*"
-    ],
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false,
-    // Editor settings for test files
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
-    },
     "[typescript]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true
@@ -68,7 +25,6 @@
     // Vitest configuration for frontend tests
     "vitest.enable": true,
     "vitest.commandLine": "npm run test:watch",
-    "vitest.rootConfig": "./frontend/vitest.config.ts",
     "testing.automaticallyOpenPeekView": "failureInVisibleDocument"
 }
 
