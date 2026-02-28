@@ -1,8 +1,14 @@
-import { jwtVerify } from "jose";
+import { createClient } from "@supabase/supabase-js";
 import { PrismaClient, User } from "@prisma/client";
 import { APIError } from "./error-handler";
 
 const prisma = new PrismaClient();
+
+// Create Supabase client for server-side auth verification
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export interface JWTPayload {
   sub: string;
@@ -10,24 +16,41 @@ export interface JWTPayload {
   name?: string;
   aud: string;
   exp: number;
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
 }
 
 /**
- * Verify JWT token using jose library
+ * Verify JWT token using Supabase auth
  * @param token JWT token string
  * @returns Decoded JWT payload
  */
 export async function verifyJWT(token: string): Promise<JWTPayload> {
-  const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET || "");
-
-  if (!secret) {
-    throw new APIError(500, "SUPABASE_JWT_SECRET is not configured");
-  }
-
   try {
-    const verified = await jwtVerify(token, secret);
-    return verified.payload as unknown as JWTPayload;
+    // Use Supabase's built-in getUser to verify the token
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      throw new Error(error?.message || "User not found");
+    }
+
+    // Convert Supabase user to our JWTPayload format
+    return {
+      sub: user.id,
+      email: user.email!,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      aud: user.aud || "authenticated",
+      exp: Math.floor(Date.now() / 1000) + 3600, // Approximate expiry
+      user_metadata: user.user_metadata,
+    };
   } catch (error: any) {
+    console.error("❌ JWT verification failed:", error.message);
+    console.error("Token preview:", token.substring(0, 50) + "...");
     throw new APIError(401, "Invalid or expired token");
   }
 }

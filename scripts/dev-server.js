@@ -12,6 +12,7 @@ const path = require('path');
 
 const PORT = 3000;
 const PID_FILE = path.join(__dirname, '.dev-server.pid');
+const LOG_FILE = path.join(__dirname, '..', 'dev-server.log');
 
 function savePid(pid) {
   fs.writeFileSync(PID_FILE, pid.toString());
@@ -98,11 +99,18 @@ async function start() {
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   console.log(`🚀 Starting dev server on port ${PORT}...`);
+  console.log(`📝 Logs will be written to: ${LOG_FILE}`);
+  
+  // Open log file for writing (truncate if exists)
+  const logFd = fs.openSync(LOG_FILE, 'w');
   
   const devServer = spawn('npx', ['next', 'dev', '-p', PORT.toString()], {
-    stdio: 'ignore', // Don't inherit stdio for detached process
+    stdio: ['ignore', logFd, logFd], // Redirect stdout and stderr to log file
     detached: true,
   });
+  
+  // Close the file descriptor in the parent process
+  fs.closeSync(logFd);
 
   savePid(devServer.pid);
 
@@ -120,8 +128,10 @@ async function start() {
 
   console.log(`\n✅ Server started on http://localhost:${PORT}`);
   console.log(`   PID: ${devServer.pid}`);
+  console.log(`   Logs: ${LOG_FILE}`);
   console.log(`   Use 'npm run dev:stop' to stop it`);
-  console.log(`   Use 'npm run dev:restart' to restart it\n`);
+  console.log(`   Use 'npm run dev:restart' to restart it`);
+  console.log(`   Use 'tail -f ${LOG_FILE}' to watch logs\n`);
 }
 
 async function stop() {

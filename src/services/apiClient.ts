@@ -17,15 +17,21 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  // Only get Supabase token if configured, otherwise use dev token from cookie
-  const token = hasSupabaseConfig
-    ? await getAuthToken()
-    : typeof document !== "undefined"
-      ? document.cookie
-          .split("; ")
-          .find((c) => c.startsWith("sb-access-token="))
-          ?.split("=")[1]
-      : null;
+  // Try to get token from cookie first (works for both dev and Google auth)
+  let token: string | null = null;
+
+  if (typeof document !== "undefined") {
+    token =
+      document.cookie
+        .split("; ")
+        .find((c) => c.startsWith("sb-access-token="))
+        ?.split("=")[1] || null;
+  }
+
+  // Fallback to Supabase session if cookie not found
+  if (!token && hasSupabaseConfig) {
+    token = await getAuthToken();
+  }
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",

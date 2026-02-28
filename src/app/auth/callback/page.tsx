@@ -29,13 +29,23 @@ export default function AuthCallbackPage() {
 
       try {
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
+
+          // Set the access token in a cookie for API requests
+          if (data.session?.access_token) {
+            document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
+          }
         } else {
           const { data } = await supabase.auth.getSession();
           if (!data.session) {
             setError("Missing OAuth code");
             return;
+          }
+
+          // Set the access token in a cookie for API requests
+          if (data.session?.access_token) {
+            document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
           }
         }
 
