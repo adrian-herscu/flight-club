@@ -2,7 +2,7 @@
 
 /**
  * T064 [US12] Touch-friendly enrollment queue with mobile optimizations
- * 
+ *
  * Enhancements:
  * - Larger touch targets (min 44px height)
  * - Responsive button sizing
@@ -43,8 +43,7 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
     try {
       setLoading(true);
       const data = await apiClient.get<{ items: Enrollment[] }>(
-        `/api/v1/courses/${courseId}/enrollments`,
-        { params: { status: "pending_approval" } },
+        `/api/v1/courses/${courseId}/enrollments?status=pending_approval`,
       );
       setEnrollments(data.items);
     } catch (err) {
@@ -233,28 +232,6 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
           }
         }
       `}</style>
-                    </div>
-                  </div>
-
-                  {spotsRemaining !== null && spotsRemaining <= 0 && (
-                    <div
-                      style={{
-                        marginTop: "0.75rem",
-                        padding: "0.5rem",
-                        background: "#fff3cd",
-                        borderRadius: "4px",
-                        fontSize: "0.875rem",
-                        color: "#856404",
-                      }}
-                    >
-                      ⚠️ Course is at capacity. Approving will add student to waitlist.
-                    </div>
-                  )}
-                </div>
-              ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }

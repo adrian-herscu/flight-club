@@ -1,8 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiClient } from "@/services/apiClient";
+import { useSchool } from "@/services/schoolContext";
 import Link from "next/link";
+
+interface Enrollment {
+  id: number;
+  courseId?: number;
+  course_id?: number;
+  status: string;
+  course?: { id: number; name?: string; title?: string; status: string };
+}
 
 interface Course {
   id: number;

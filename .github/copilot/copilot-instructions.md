@@ -234,6 +234,9 @@ When context files don't provide specific guidance:
 ### TypeScript / Next.js (unified full-stack)
   scripts alongside the DDL, never in ad-hoc scripts. Every data migration MUST
 - Target **TypeScript 5.x**; use strict mode throughout.
+- **Code Validation**: After generating TypeScript code, validate compilation by running
+  `npm run build` or `npx tsc --noEmit`. Never commit code that fails type checking.
+  Fix all type errors before presenting code to the user.
 - All API route handlers in `src/app/api/v1/` MUST be `async` functions.
 - Zod schemas for all request/response validation; use `.parse()` for validation.
 - Every API response MUST include `request_id` in the envelope (see Principle II).

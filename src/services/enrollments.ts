@@ -72,9 +72,11 @@ export async function getCourseEnrollments(
   courseId: number,
   params?: { status?: string; page?: number; page_size?: number },
 ): Promise<{ items: Enrollment[] }> {
-  return apiClient.get<{ items: Enrollment[] }>(`/api/v1/courses/${courseId}/enrollments`, {
-    params,
-  });
+  const queryString = params
+    ? new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString()
+    : "";
+  const url = `/api/v1/courses/${courseId}/enrollments${queryString ? `?${queryString}` : ""}`;
+  return apiClient.get<{ items: Enrollment[] }>(url);
 }
 
 /**
@@ -85,5 +87,9 @@ export async function getMyEnrollments(params?: {
   page?: number;
   page_size?: number;
 }): Promise<{ items: Enrollment[] }> {
-  return apiClient.get<{ items: Enrollment[] }>("/api/v1/enrollments/me", { params });
+  const queryString = params
+    ? new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString()
+    : "";
+  const url = `/api/v1/enrollments/me${queryString ? `?${queryString}` : ""}`;
+  return apiClient.get<{ items: Enrollment[] }>(url);
 }

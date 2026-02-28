@@ -28,9 +28,11 @@ export default function LoginPage() {
 
     // Check if already authenticated
     const checkAuth = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        router.push(redirectPath);
+      if (supabase) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          router.push(redirectPath);
+        }
       }
     };
     checkAuth();

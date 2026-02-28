@@ -84,7 +84,7 @@ export default function InstructorAssignmentForm({
         const conflictData = err.response.data.error.details.conflicts as LessonConflict[];
         setConflicts(conflictData);
         setError(
-          `Instructor has ${conflictData.length} scheduling conflict${conflictData.length > 1 ? "s" : ""}. See details below.`
+          `Instructor has ${conflictData.length} scheduling conflict${conflictData.length > 1 ? "s" : ""}. See details below.`,
         );
       } else {
         setError(err instanceof Error ? err.message : "Failed to assign instructor");
@@ -204,7 +204,10 @@ export default function InstructorAssignmentForm({
                 fontSize: "0.875rem",
                 color: "#856404",
               }}
-            >urseName}</strong> - {conflict.lessonTitle}
+            >
+              {conflicts.map((conflict) => (
+                <li key={`${conflict.courseId}-${conflict.courseLessonId}`}>
+                  <strong>{conflict.courseName}</strong> - {conflict.lessonTitle}
                   <br />
                   {new Date(conflict.startTime).toLocaleString()} -{" "}
                   {new Date(conflict.endTime).toLocaleString()}
@@ -213,10 +216,7 @@ export default function InstructorAssignmentForm({
                   <br />
                   <span style={{ fontSize: "0.8rem", color: "#666" }}>
                     Duration: {conflict.durationHours}h
-                  </span>g_start_time).toLocaleString()} -{" "}
-                  {new Date(conflict.conflicting_end_time).toLocaleString()}
-                  <br />
-                  Location: {conflict.location}
+                  </span>
                 </li>
               ))}
             </ul>

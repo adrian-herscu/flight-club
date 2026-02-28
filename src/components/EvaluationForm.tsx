@@ -30,7 +30,7 @@ interface EvaluationFormProps {
 
 /**
  * T064 [US12] Touch-friendly evaluation form with mobile optimizations
- * 
+ *
  * Enhancements:
  * - Larger tap targets (min 44px height)
  * - Improved spacing for touch interactions
@@ -218,7 +218,7 @@ export default function EvaluationForm({
             rows={3}
             placeholder="Internal notes for administrative purposes..."
             style={{
-              width: "101rem", // Increased for touch
+              width: "100%", // Increased for touch
               border: "1px solid #ddd",
               borderRadius: "4px",
               fontSize: "1rem",
@@ -226,8 +226,7 @@ export default function EvaluationForm({
               background: isFinalized ? "#f5f5f5" : "white",
               cursor: isFinalized ? "not-allowed" : "text",
               resize: "vertical",
-              minHeight: "100px", // Adequate touch area ? "not-allowed" : "text",
-              resize: "vertical",
+              minHeight: "100px", // Adequate touch area
             }}
           />
         </div>
@@ -252,9 +251,9 @@ export default function EvaluationForm({
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{1rem 1.5rem", // Increased padding for touch
+            style={{
+              padding: "1rem 1.5rem", // Increased padding for touch
               minHeight: "48px", // Touch-friendly button height
-              padding: "0.75rem 1.5rem",
               background: saving ? "#ccc" : "#4285f4",
               color: "white",
               border: "none",

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/services/apiClient";
+import { useSchool } from "@/services/schoolContext";
 
 interface Course {
   id: number;
@@ -19,21 +20,24 @@ interface Course {
 
 export default function AdminCoursesPage() {
   const router = useRouter();
+  const { currentSchool } = useSchool();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
-    fetchCourses();
-  }, [statusFilter]);
+    if (currentSchool) fetchCourses();
+  }, [statusFilter, currentSchool]);
 
   const fetchCourses = async () => {
+    if (!currentSchool) return;
     try {
       setLoading(true);
-      const params = statusFilter !== "all" ? { status: statusFilter } : {};
-      const data = await apiClient.get<{ items: Course[] }>("/api/v1/courses", { params });
-      setCourses(data.items);
+      const qs = new URLSearchParams({ schoolId: String(currentSchool.id) });
+      if (statusFilter !== "all") qs.set("status", statusFilter);
+      const data = await apiClient.get<Course[] | { items: Course[] }>(`/api/v1/courses?${qs}`);
+      setCourses(Array.isArray(data) ? data : ((data as { items: Course[] }).items ?? []));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load courses");
     } finally {
@@ -70,7 +74,7 @@ export default function AdminCoursesPage() {
       >
         <h1 style={{ margin: 0 }}>Manage Courses</h1>
         <button
-          onClick={() => router.push("/admin/syllabuses")}
+          onClick={() => router.push("/admin/courses/new")}
           style={{
             padding: "0.75rem 1.5rem",
             background: "#4285f4",
@@ -126,7 +130,7 @@ export default function AdminCoursesPage() {
               : "Get started by creating your first course from a syllabus."}
           </p>
           <button
-            onClick={() => router.push("/admin/syllabuses")}
+            onClick={() => router.push("/admin/courses/new")}
             style={{
               padding: "0.75rem 1.5rem",
               background: "#4285f4",
@@ -137,7 +141,7 @@ export default function AdminCoursesPage() {
               fontSize: "1rem",
             }}
           >
-            Browse Syllabuses
+            Create New Course
           </button>
         </div>
       ) : (

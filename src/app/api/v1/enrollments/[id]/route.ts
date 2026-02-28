@@ -13,7 +13,9 @@ export async function DELETE(request: NextRequest, context: { params: { id: stri
     // DELETE /enrollments/:id - Unenroll student (admin or student)
     const enrollment = await enrollmentsService.getEnrollmentById(parseInt(context.params.id));
     const userId = user.id;
-    if ((enrollment.schoolId && user.role !== "student") || enrollment.studentId === userId) {
+    if (enrollment.studentId === userId) {
+      // Student can unenroll themselves
+    } else if (enrollment.schoolId) {
       await requireAdmin(user, enrollment.schoolId);
     }
     const updated = await enrollmentsService.unenrollStudent(parseInt(context.params.id));

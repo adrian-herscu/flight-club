@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/services/apiClient";
+import { useSchool } from "@/services/schoolContext";
 
 interface Course {
   id: number;
@@ -19,25 +20,48 @@ interface Course {
 
 export default function StudentCoursesPage() {
   const router = useRouter();
+  const { currentSchool } = useSchool();
   const [courses, setCourses] = useState<Course[]>([]);
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"enrolled" | "available">("enrolled");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    if (currentSchool) fetchCourses();
+  }, [currentSchool]);
 
   const fetchCourses = async () => {
+    if (!currentSchool) return;
     try {
       setLoading(true);
-      const [enrolledData, availableData] = await Promise.all([
-        apiClient.get<{ items: Course[] }>("/api/v1/courses"),
-        apiClient.get<{ items: Course[] }>("/api/v1/courses/available"),
-      ]);
-      setCourses(enrolledData.items);
-      setAvailableCourses(availableData.items);
+      // Get current user id for enrollment
+      const me = await apiClient.get<{ id: number }>("/api/v1/me");
+      setCurrentUserId(me.id);
+
+      // Get all enrollments for this user to know which courses they're in
+      const enrollmentsData = await apiClient
+        .get<any[]>(`/api/v1/students/${me.id}/enrollments`)
+        .catch(() => []);
+      const myEnrollments = Array.isArray(enrollmentsData) ? enrollmentsData : [];
+      const activeIds = new Set<number>(
+        myEnrollments
+          .filter((e: any) => e.status !== "rejected")
+          .map((e: any) => e.courseId ?? e.course_id ?? e.course?.id)
+          .filter(Boolean),
+      );
+      setEnrolledIds(activeIds);
+
+      // Get all school courses
+      const allData = await apiClient.get<any>(`/api/v1/courses?schoolId=${currentSchool.id}`);
+      const all: Course[] = Array.isArray(allData)
+        ? allData
+        : ((allData as any).items ?? (allData as any).data ?? []);
+
+      setCourses(all.filter((c) => activeIds.has(c.id)));
+      setAvailableCourses(all.filter((c) => !activeIds.has(c.id) && c.status !== "cancelled"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load courses");
     } finally {
@@ -46,10 +70,18 @@ export default function StudentCoursesPage() {
   };
 
   const handleRequestEnrollment = async (courseId: number) => {
+    if (!currentSchool || !currentUserId) {
+      alert("Missing school or user context. Please refresh and try again.");
+      return;
+    }
     try {
-      await apiClient.post("/api/v1/enrollments", { course_id: courseId });
-      await fetchCourses(); // Refresh data
-      alert("Enrollment request submitted successfully! An admin will review your request.");
+      await apiClient.post("/api/v1/enrollments", {
+        courseId,
+        studentId: currentUserId,
+        schoolId: currentSchool.id,
+      });
+      await fetchCourses();
+      alert("Enrollment request submitted! An admin will review your request.");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to request enrollment");
     }
