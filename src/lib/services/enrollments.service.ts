@@ -12,22 +12,23 @@ export async function createEnrollment(data: {
   studentId: number;
   schoolId: number;
 }) {
-  // Verify course exists
+  // Get course with enrollment count in one query
   const course = await prisma.course.findUnique({
     where: { id: data.courseId },
+    select: {
+      maxStudents: true,
+      _count: {
+        select: {
+          enrollments: {
+            where: { status: EnrollmentStatus.enrolled },
+          },
+        },
+      },
+    },
   });
 
   if (!course) {
     throw new APIError("NOT_FOUND", "Course not found");
-  }
-
-  // Verify student exists
-  const student = await prisma.user.findUnique({
-    where: { id: data.studentId },
-  });
-
-  if (!student) {
-    throw new APIError("NOT_FOUND", "Student not found");
   }
 
   // Check if already enrolled
@@ -46,31 +47,31 @@ export async function createEnrollment(data: {
     );
   }
 
-  // Determine status: if course is full, go to waitlist
-  const enrolledCount = await prisma.studentEnrollment.count({
-    where: {
-      courseId: data.courseId,
-      status: EnrollmentStatus.enrolled,
-    },
-  });
-
+  const enrolledCount = course._count.enrollments;
   const status =
     enrolledCount >= course.maxStudents
       ? EnrollmentStatus.waitlist
       : EnrollmentStatus.pending_approval;
 
-  return prisma.studentEnrollment.create({
-    data: {
-      courseId: data.courseId,
-      studentId: data.studentId,
-      schoolId: data.schoolId,
-      status,
-    },
-    include: {
-      course: { select: { id: true, name: true } },
-      student: { select: { id: true, email: true, name: true } },
-    },
-  });
+  try {
+    return await prisma.studentEnrollment.create({
+      data: {
+        courseId: data.courseId,
+        studentId: data.studentId,
+        schoolId: data.schoolId,
+        status,
+      },
+      include: {
+        course: { select: { id: true, name: true } },
+        student: { select: { id: true, email: true, name: true } },
+      },
+    });
+  } catch (error: any) {
+    if (error.code === "P2003") {
+      throw new APIError("NOT_FOUND", "Student not found");
+    }
+    throw error;
+  }
 }
 
 export async function getEnrollmentById(id: number) {
@@ -121,7 +122,28 @@ export async function getStudentEnrollments(studentId: number) {
 }
 
 export async function approveEnrollment(id: number) {
-  const enrollment = await getEnrollmentById(id);
+  const enrollment = await prisma.studentEnrollment.findUnique({
+    where: { id },
+    include: {
+      course: {
+        select: {
+          id: true,
+          maxStudents: true,
+          _count: {
+            select: {
+              enrollments: {
+                where: { status: EnrollmentStatus.enrolled },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!enrollment) {
+    throw new APIError("NOT_FOUND", "Enrollment not found");
+  }
 
   if (enrollment.status !== EnrollmentStatus.pending_approval) {
     throw new APIError(
@@ -130,19 +152,8 @@ export async function approveEnrollment(id: number) {
     );
   }
 
-  // Check course capacity
-  const enrolledCount = await prisma.studentEnrollment.count({
-    where: {
-      courseId: enrollment.courseId,
-      status: EnrollmentStatus.enrolled,
-    },
-  });
-
-  const course = await prisma.course.findUnique({
-    where: { id: enrollment.courseId },
-  });
-
-  if (enrolledCount >= (course?.maxStudents || 0)) {
+  const enrolledCount = enrollment.course._count.enrollments;
+  if (enrolledCount >= enrollment.course.maxStudents) {
     throw new APIError("CONFLICT", "Course is at capacity. Must promote from waitlist first.");
   }
 
@@ -161,36 +172,44 @@ export async function approveEnrollment(id: number) {
 }
 
 export async function rejectEnrollment(id: number) {
-  const enrollment = await getEnrollmentById(id);
+  const updated = await prisma.studentEnrollment.updateMany({
+    where: {
+      id,
+      status: EnrollmentStatus.pending_approval,
+    },
+    data: { status: EnrollmentStatus.rejected },
+  });
 
-  if (enrollment.status !== EnrollmentStatus.pending_approval) {
-    throw new APIError("CONFLICT", `Can only reject pending enrollments`);
+  if (updated.count === 0) {
+    throw new APIError("CONFLICT", "Can only reject pending enrollments");
   }
 
-  return prisma.studentEnrollment.update({
+  return prisma.studentEnrollment.findUnique({
     where: { id },
-    data: { status: EnrollmentStatus.rejected },
     include: {
       student: { select: { id: true, email: true, name: true } },
     },
-  });
+  })!;
 }
 
 async function promoteWaitlisted(courseId: number) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
+    select: {
+      maxStudents: true,
+      _count: {
+        select: {
+          enrollments: {
+            where: { status: EnrollmentStatus.enrolled },
+          },
+        },
+      },
+    },
   });
 
   if (!course) return;
 
-  const enrolledCount = await prisma.studentEnrollment.count({
-    where: {
-      courseId,
-      status: EnrollmentStatus.enrolled,
-    },
-  });
-
-  const openSpots = course.maxStudents - enrolledCount;
+  const openSpots = course.maxStudents - course._count.enrollments;
 
   if (openSpots > 0) {
     const waitlisted = await prisma.studentEnrollment.findMany({
@@ -200,11 +219,12 @@ async function promoteWaitlisted(courseId: number) {
       },
       orderBy: { createdAt: "asc" },
       take: openSpots,
+      select: { id: true },
     });
 
-    for (const enrollment of waitlisted) {
-      await prisma.studentEnrollment.update({
-        where: { id: enrollment.id },
+    if (waitlisted.length > 0) {
+      await prisma.studentEnrollment.updateMany({
+        where: { id: { in: waitlisted.map((e) => e.id) } },
         data: { status: EnrollmentStatus.pending_approval },
       });
     }

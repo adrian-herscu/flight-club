@@ -15,31 +15,14 @@ export async function recordEvaluation(data: {
   feedbackNotes?: string;
   schoolId: number;
 }) {
-  // Verify student and lesson exist
-  const student = await prisma.user.findUnique({
-    where: { id: data.studentId },
-  });
-
-  if (!student) {
-    throw new APIError("NOT_FOUND", "Student not found");
-  }
-
-  const courseLesson = await prisma.courseLesson.findUnique({
-    where: { id: data.courseLessonId },
-    include: { course: true },
-  });
-
-  if (!courseLesson) {
-    throw new APIError("NOT_FOUND", "Course lesson not found");
-  }
-
-  // Verify enrollment exists
+  // Verify enrollment and get student/lesson validation in one query
   const enrollment = await prisma.studentEnrollment.findUnique({
     where: { id: data.enrollmentId },
+    select: { studentId: true },
   });
 
   if (!enrollment || enrollment.studentId !== data.studentId) {
-    throw new APIError("NOT_FOUND", "Enrollment not found");
+    throw new APIError("NOT_FOUND", "Enrollment not found or doesn't match student");
   }
 
   // Check if evaluation already exists
@@ -51,7 +34,6 @@ export async function recordEvaluation(data: {
   });
 
   if (existing) {
-    // Update existing evaluation
     return prisma.studentLessonEvaluation.update({
       where: { id: existing.id },
       data: {
@@ -71,26 +53,33 @@ export async function recordEvaluation(data: {
     });
   }
 
-  return prisma.studentLessonEvaluation.create({
-    data: {
-      studentId: data.studentId,
-      enrollmentId: data.enrollmentId,
-      courseLessonId: data.courseLessonId,
-      schoolId: data.schoolId,
-      result: data.result,
-      feedbackNotes: data.feedbackNotes,
-    },
-    include: {
-      student: { select: { id: true, email: true, name: true } },
-      courseLesson: {
-        select: {
-          id: true,
-          title: true,
-          sequenceOrder: true,
+  try {
+    return await prisma.studentLessonEvaluation.create({
+      data: {
+        studentId: data.studentId,
+        enrollmentId: data.enrollmentId,
+        courseLessonId: data.courseLessonId,
+        schoolId: data.schoolId,
+        result: data.result,
+        feedbackNotes: data.feedbackNotes,
+      },
+      include: {
+        student: { select: { id: true, email: true, name: true } },
+        courseLesson: {
+          select: {
+            id: true,
+            title: true,
+            sequenceOrder: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error: any) {
+    if (error.code === "P2003") {
+      throw new APIError("NOT_FOUND", "Student or course lesson not found");
+    }
+    throw error;
+  }
 }
 
 export async function getEvaluationById(id: number) {
@@ -159,24 +148,24 @@ export async function getStudentEvaluations(studentId: number) {
 }
 
 export async function getCourseProgress(courseId: number, studentId?: number): Promise<any> {
-  // Get all course lessons
-  const courseLessons = await prisma.courseLesson.findMany({
-    where: { courseId },
-    orderBy: { sequenceOrder: "asc" },
-  });
-
   if (studentId) {
-    // Get progress for specific student
-    const evaluations = await prisma.studentLessonEvaluation.findMany({
-      where: {
-        studentId,
-        courseLesson: { courseId },
+    // Get lessons with evaluations in one query
+    const courseLessons = await prisma.courseLesson.findMany({
+      where: { courseId },
+      orderBy: { sequenceOrder: "asc" },
+      include: {
+        evaluations: {
+          where: { studentId },
+          select: {
+            result: true,
+            updatedAt: true,
+          },
+        },
       },
     });
 
     const progress = courseLessons.map((cl) => {
-      const evaluation = evaluations.find((e) => e.courseLessonId === cl.id);
-
+      const evaluation = cl.evaluations[0];
       return {
         courseLessonId: cl.id,
         lessonTitle: cl.title,
@@ -207,57 +196,89 @@ export async function getCourseProgress(courseId: number, studentId?: number): P
     };
   }
 
-  // Get aggregate progress for all students in course
-  const enrollments = await prisma.studentEnrollment.findMany({
-    where: {
-      courseId,
-      status: "enrolled",
-    },
+  // Get all data in 2 queries instead of N+1
+  const [courseLessons, enrollments, allEvaluations] = await Promise.all([
+    prisma.courseLesson.findMany({
+      where: { courseId },
+      select: { id: true },
+    }),
+    prisma.studentEnrollment.findMany({
+      where: {
+        courseId,
+        status: "enrolled",
+      },
+      select: { studentId: true },
+    }),
+    prisma.studentLessonEvaluation.findMany({
+      where: {
+        courseLesson: { courseId },
+      },
+      select: {
+        studentId: true,
+        result: true,
+      },
+    }),
+  ]);
+
+  const totalLessons = courseLessons.length;
+  const studentProgress = enrollments.map((enrollment) => {
+    const studentEvals = allEvaluations.filter((e) => e.studentId === enrollment.studentId);
+    const completed = studentEvals.length;
+    const passed = studentEvals.filter((e) => e.result === "pass").length;
+    const failed = studentEvals.filter((e) => e.result === "fail").length;
+
+    return {
+      studentId: enrollment.studentId,
+      completionPercentage: totalLessons > 0 ? Math.round((completed / totalLessons) * 100) : 0,
+      passed,
+      failed,
+    };
   });
 
-  const studentProgress: any[] = await Promise.all(
-    enrollments.map((e) => getCourseProgress(courseId, e.studentId)),
-  );
-
   const totalStudents = enrollments.length;
-  const avgCompletion: number =
+  const avgCompletion =
     totalStudents > 0
       ? Math.round(
-          studentProgress.reduce((sum, p) => sum + (p.completionPercentage || 0), 0) /
-            totalStudents,
+          studentProgress.reduce((sum, p) => sum + p.completionPercentage, 0) / totalStudents,
         )
       : 0;
 
   return {
     courseId,
-    totalLessons: courseLessons.length,
+    totalLessons,
     totalEnrolledStudents: totalStudents,
     averageCompletion: avgCompletion,
-    studentProgress: studentProgress.map((p) => ({
-      studentId: p.studentId,
-      completionPercentage: p.completionPercentage,
-      passed: p.passed,
-      failed: p.failed,
-    })),
+    studentProgress,
   };
 }
 
 export async function passStudent(evaluationId: number) {
-  const evaluation = await getEvaluationById(evaluationId);
-
-  return prisma.studentLessonEvaluation.update({
+  const updated = await prisma.studentLessonEvaluation.updateMany({
     where: { id: evaluationId },
-    data: {
-      result: EvaluationResult.pass,
-    },
+    data: { result: EvaluationResult.pass },
+  });
+
+  if (updated.count === 0) {
+    throw new APIError("NOT_FOUND", "Evaluation not found");
+  }
+
+  return prisma.studentLessonEvaluation.findUnique({
+    where: { id: evaluationId },
     include: {
       student: { select: { id: true, email: true, name: true } },
     },
-  });
+  })!;
 }
 
 export async function failStudent(evaluationId: number, adminNotes?: string) {
-  const evaluation = await getEvaluationById(evaluationId);
+  const evaluation = await prisma.studentLessonEvaluation.findUnique({
+    where: { id: evaluationId },
+    select: { adminNotes: true },
+  });
+
+  if (!evaluation) {
+    throw new APIError("NOT_FOUND", "Evaluation not found");
+  }
 
   return prisma.studentLessonEvaluation.update({
     where: { id: evaluationId },
@@ -272,7 +293,14 @@ export async function failStudent(evaluationId: number, adminNotes?: string) {
 }
 
 export async function markNotAttempted(evaluationId: number, adminNotes?: string) {
-  const evaluation = await getEvaluationById(evaluationId);
+  const evaluation = await prisma.studentLessonEvaluation.findUnique({
+    where: { id: evaluationId },
+    select: { adminNotes: true },
+  });
+
+  if (!evaluation) {
+    throw new APIError("NOT_FOUND", "Evaluation not found");
+  }
 
   return prisma.studentLessonEvaluation.update({
     where: { id: evaluationId },
@@ -287,9 +315,13 @@ export async function markNotAttempted(evaluationId: number, adminNotes?: string
 }
 
 export async function deleteEvaluation(id: number) {
-  const evaluation = await getEvaluationById(id);
-
-  return prisma.studentLessonEvaluation.delete({
+  const deleted = await prisma.studentLessonEvaluation.deleteMany({
     where: { id },
   });
+
+  if (deleted.count === 0) {
+    throw new APIError("NOT_FOUND", "Evaluation not found");
+  }
+
+  return { id };
 }

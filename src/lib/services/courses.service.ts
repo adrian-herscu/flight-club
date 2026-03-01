@@ -16,18 +16,13 @@ export async function createCourse(data: {
   endDate: Date;
   maxStudents: number;
 }) {
-  // Verify school exists
-  const school = await prisma.school.findUnique({
-    where: { id: data.schoolId },
-  });
-  if (!school) {
-    throw new APIError("NOT_FOUND", "School not found");
+  if (data.startDate >= data.endDate) {
+    throw new APIError("INVALID_DATE", "Course end date must be after start date");
   }
 
-  // Verify syllabus exists and is FINAL
   const syllabus = await prisma.syllabus.findUnique({
     where: { id: data.syllabusId },
-    include: { lessons: true },
+    select: { status: true },
   });
 
   if (!syllabus) {
@@ -38,29 +33,32 @@ export async function createCourse(data: {
     throw new APIError("CONFLICT", "Can only create courses from published (FINAL) syllabuses");
   }
 
-  if (data.startDate >= data.endDate) {
-    throw new APIError("INVALID_DATE", "Course end date must be after start date");
-  }
-
-  return prisma.course.create({
-    data: {
-      schoolId: data.schoolId,
-      syllabusId: data.syllabusId,
-      name: data.name,
-      description: data.description,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      maxStudents: data.maxStudents,
-      status: CourseStatus.pending,
-    },
-    include: {
-      school: { select: { id: true, name: true } },
-      syllabus: true,
-      lessons: {
-        orderBy: { sequenceOrder: "asc" },
+  try {
+    return await prisma.course.create({
+      data: {
+        schoolId: data.schoolId,
+        syllabusId: data.syllabusId,
+        name: data.name,
+        description: data.description,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        maxStudents: data.maxStudents,
+        status: CourseStatus.pending,
       },
-    },
-  });
+      include: {
+        school: { select: { id: true, name: true } },
+        syllabus: true,
+        lessons: {
+          orderBy: { sequenceOrder: "asc" },
+        },
+      },
+    });
+  } catch (error: any) {
+    if (error.code === "P2003") {
+      throw new APIError("NOT_FOUND", "School not found");
+    }
+    throw error;
+  }
 }
 
 export async function getCourseById(id: number) {
@@ -124,9 +122,16 @@ export async function updateCourse(
     maxStudents?: number;
   },
 ) {
-  const course = await getCourseById(id);
-
   if (data.startDate || data.endDate) {
+    const course = await prisma.course.findUnique({
+      where: { id },
+      select: { startDate: true, endDate: true },
+    });
+
+    if (!course) {
+      throw new APIError("NOT_FOUND", "Course not found");
+    }
+
     const startDate = data.startDate || course.startDate;
     const endDate = data.endDate || course.endDate;
     if (startDate >= endDate) {
@@ -146,34 +151,46 @@ export async function updateCourse(
 }
 
 export async function cancelCourse(id: number) {
-  const course = await getCourseById(id);
-
-  if (course.status === CourseStatus.cancelled) {
-    throw new APIError("CONFLICT", "Course is already cancelled");
-  }
-
-  return prisma.course.update({
-    where: { id },
+  const updated = await prisma.course.updateMany({
+    where: {
+      id,
+      status: { not: CourseStatus.cancelled },
+    },
     data: { status: CourseStatus.cancelled },
   });
+
+  if (updated.count === 0) {
+    throw new APIError("CONFLICT", "Course is already cancelled or not found");
+  }
+
+  return prisma.course.findUnique({ where: { id } })!;
 }
 
 export async function getCourseLessons(courseId: number) {
-  const course = await getCourseById(courseId);
-  return course.lessons;
+  return prisma.courseLesson.findMany({
+    where: { courseId },
+    orderBy: { sequenceOrder: "asc" },
+    include: {
+      instructorAssignments: {
+        include: {
+          instructor: {
+            select: { id: true, email: true, name: true },
+          },
+        },
+      },
+    },
+  });
 }
 
 export async function updateCourseLessonStatus(courseLessonId: number, status: string) {
-  const lesson = await prisma.courseLesson.findUnique({
-    where: { id: courseLessonId },
-  });
-
-  if (!lesson) {
-    throw new APIError("NOT_FOUND", "Course lesson not found");
-  }
-
-  return prisma.courseLesson.update({
+  const updated = await prisma.courseLesson.updateMany({
     where: { id: courseLessonId },
     data: { status: status as any },
   });
+
+  if (updated.count === 0) {
+    throw new APIError("NOT_FOUND", "Course lesson not found");
+  }
+
+  return prisma.courseLesson.findUnique({ where: { id: courseLessonId } })!;
 }
