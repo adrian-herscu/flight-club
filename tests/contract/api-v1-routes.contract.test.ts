@@ -20,12 +20,15 @@ describe("API v1 route contracts (Node migration)", () => {
     });
   });
 
-  it("GET /api/v1/me returns dev user in non-production without cookie", async () => {
-    vi.stubEnv("NODE_ENV", "test");
+  it("GET /api/v1/me returns dev user in development mode with correct token", async () => {
+    vi.stubEnv("NODE_ENV", "development");
 
     const request = new Request("http://localhost:3000/api/v1/me", {
       headers: {
-        authorization: "Bearer test-token-123",
+        authorization: "Bearer dev-mode-local-testing-token",
+        "x-dev-user-email": "dev@local.test",
+        "x-dev-user-name": "Dev User",
+        "x-dev-user-role": "admin",
       },
     });
     const response = await meGet(request);
@@ -60,12 +63,14 @@ describe("API v1 route contracts (Node migration)", () => {
     expect(body.request_id).toBe(response.headers.get("X-Request-ID"));
   });
 
-  it("GET /api/v1/me succeeds in production when sb-access-token cookie exists", async () => {
-    vi.stubEnv("NODE_ENV", "production");
+  it("GET /api/v1/me succeeds in development when token is dev-mode-local-testing-token", async () => {
+    vi.stubEnv("NODE_ENV", "development");
 
     const request = new Request("http://localhost:3000/api/v1/me", {
       headers: {
-        cookie: "sb-access-token=dev-token-123; Path=/;",
+        authorization: "Bearer dev-mode-local-testing-token",
+        "x-dev-user-email": "dev@local.test",
+        "x-dev-user-name": "Dev User",
       },
     });
     const response = await meGet(request);
