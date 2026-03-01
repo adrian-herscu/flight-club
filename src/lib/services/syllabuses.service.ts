@@ -36,20 +36,39 @@ export async function getSyllabusById(id: number) {
   return requireNotNull(syllabus, "Syllabus not found");
 }
 
-export async function getSchoolSyllabuses(schoolId: number) {
-  // Get all courses for this school
-  const courses = await prisma.course.findMany({
-    where: { schoolId },
-    select: { syllabusId: true },
-  });
-
-  const syllabusIds = Array.from(new Set(courses.map((c) => c.syllabusId)));
-
+export async function getAllSyllabuses() {
   return prisma.syllabus.findMany({
-    where: { id: { in: syllabusIds } },
+    include: {
+      _count: {
+        select: { lessons: true },
+      },
+      lessons: {
+        orderBy: { order: "asc" },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getSchoolSyllabuses(schoolId: number) {
+  // Return all FINAL syllabuses that are:
+  // 1. System syllabuses (school_id = null)
+  // 2. School-specific syllabuses (school_id = schoolId)
+  // Per spec: "school admins see the latest final versions of (their school's own syllabuses + system admin syllabuses)"
+  return prisma.syllabus.findMany({
+    where: {
+      status: "FINAL",
+      OR: [
+        { schoolId: null }, // System syllabuses
+        { schoolId: schoolId }, // School-specific syllabuses
+      ],
+    },
     include: {
       lessons: {
         orderBy: { order: "asc" },
+      },
+      _count: {
+        select: { lessons: true },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -115,6 +134,78 @@ export async function publishSyllabus(id: number) {
       },
     },
   })!;
+}
+
+/**
+ * Create a new Draft version from a FINAL syllabus
+ * Per spec: "Editing a final version automatically creates a new Draft as its child"
+ */
+export async function createDraftFromFinal(parentId: number) {
+  return prisma.$transaction(async (tx) => {
+    // Get the parent syllabus
+    const parent = await tx.syllabus.findUnique({
+      where: { id: parentId },
+      include: {
+        lessons: {
+          orderBy: { order: "asc" },
+        },
+      },
+    });
+
+    if (!parent) {
+      throw new APIError("NOT_FOUND", "Parent syllabus not found");
+    }
+
+    if (parent.status !== "FINAL") {
+      throw new APIError("CONFLICT", "Can only create new version from FINAL syllabus");
+    }
+
+    // Check if a draft child already exists
+    const existingDraft = await tx.syllabus.findFirst({
+      where: {
+        parentSyllabusId: parentId,
+        status: "DRAFT",
+      },
+    });
+
+    if (existingDraft) {
+      throw new APIError("CONFLICT", "A draft version already exists for this syllabus");
+    }
+
+    // Create new draft syllabus
+    const newDraft = await tx.syllabus.create({
+      data: {
+        title: parent.title,
+        description: parent.description,
+        status: "DRAFT",
+        version: (parent.version || 1) + 1,
+        schoolId: parent.schoolId,
+        parentSyllabusId: parentId,
+      },
+    });
+
+    // Copy all lessons from parent to new draft
+    if (parent.lessons.length > 0) {
+      await tx.lesson.createMany({
+        data: parent.lessons.map((lesson) => ({
+          syllabusId: newDraft.id,
+          title: lesson.title,
+          description: lesson.description,
+          order: lesson.order,
+        })),
+      });
+    }
+
+    // Return the new draft with lessons
+    return tx.syllabus.findUnique({
+      where: { id: newDraft.id },
+      include: {
+        lessons: {
+          orderBy: { order: "asc" },
+        },
+      },
+    });
+  });
 }
 
 export async function deleteSyllabus(id: number) {

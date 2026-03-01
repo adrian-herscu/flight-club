@@ -57,7 +57,7 @@ export async function requireRole(
   schoolId?: number | null,
 ): Promise<void> {
   if (!user) {
-    throw new APIError(401, "Not authenticated");
+    throw new APIError("UNAUTHORIZED", "Not authenticated");
   }
 
   // Check for super-admin first (can access everything)
@@ -70,7 +70,7 @@ export async function requireRole(
   const hasRequiredRole = await hasRole(user.id, requiredRole, schoolId);
 
   if (!hasRequiredRole) {
-    throw new APIError(403, `User does not have required role: ${requiredRole}`);
+    throw new APIError("FORBIDDEN", `User does not have required role: ${requiredRole}`);
   }
 }
 
@@ -81,12 +81,12 @@ export async function requireRole(
  */
 export async function requireSuperAdmin(user: User | null): Promise<void> {
   if (!user) {
-    throw new APIError(401, "Not authenticated");
+    throw new APIError("UNAUTHORIZED", "Not authenticated");
   }
 
   const isSuperAdmin = await hasRole(user.id, RoleType.SUPER_ADMIN, null);
   if (!isSuperAdmin) {
-    throw new APIError(403, "Super-admin access required");
+    throw new APIError("FORBIDDEN", "Super-admin access required");
   }
 }
 
@@ -98,7 +98,7 @@ export async function requireSuperAdmin(user: User | null): Promise<void> {
  */
 export async function requireAdmin(user: User | null, schoolId?: number | null): Promise<void> {
   if (!user) {
-    throw new APIError(401, "Not authenticated");
+    throw new APIError("UNAUTHORIZED", "Not authenticated");
   }
 
   // Super-admin can access everything
@@ -110,7 +110,7 @@ export async function requireAdmin(user: User | null, schoolId?: number | null):
   // Check admin role for specific school
   const isAdmin = await hasRole(user.id, RoleType.ADMIN, schoolId);
   if (!isAdmin) {
-    throw new APIError(403, "Admin access required");
+    throw new APIError("FORBIDDEN", "Admin access required");
   }
 }
 
@@ -125,7 +125,7 @@ export async function requireInstructor(
   schoolId?: number | null,
 ): Promise<void> {
   if (!user) {
-    throw new APIError(401, "Not authenticated");
+    throw new APIError("UNAUTHORIZED", "Not authenticated");
   }
 
   // Super-admin or admin can access
@@ -142,7 +142,7 @@ export async function requireInstructor(
   // Check instructor role
   const isInstructor = await hasRole(user.id, RoleType.INSTRUCTOR, schoolId);
   if (!isInstructor) {
-    throw new APIError(403, "Instructor access required");
+    throw new APIError("FORBIDDEN", "Instructor access required");
   }
 }
 
@@ -154,7 +154,7 @@ export async function requireInstructor(
  */
 export async function requireStudent(user: User | null, schoolId?: number | null): Promise<void> {
   if (!user) {
-    throw new APIError(401, "Not authenticated");
+    throw new APIError("UNAUTHORIZED", "Not authenticated");
   }
 
   // Super-admin or admin can access
@@ -176,6 +176,6 @@ export async function requireStudent(user: User | null, schoolId?: number | null
   // Check student role
   const isStudent = await hasRole(user.id, RoleType.STUDENT, schoolId);
   if (!isStudent) {
-    throw new APIError(403, "Student access required");
+    throw new APIError("FORBIDDEN", "Student access required");
   }
 }

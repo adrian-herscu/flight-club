@@ -51,7 +51,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
   } catch (error: any) {
     console.error("❌ JWT verification failed:", error.message);
     console.error("Token preview:", token.substring(0, 50) + "...");
-    throw new APIError(401, "Invalid or expired token");
+    throw new APIError("UNAUTHORIZED", "Invalid or expired token");
   }
 }
 
@@ -63,7 +63,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
  */
 export async function getCurrentUser(authHeader: string): Promise<User> {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    throw new APIError(401, "Not authenticated");
+    throw new APIError("UNAUTHORIZED", "Not authenticated");
   }
 
   const token = authHeader.substring(7);

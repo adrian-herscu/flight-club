@@ -61,13 +61,13 @@ export default function CourseDetailPage() {
       setLoading(true);
       const [courseData, lessonsData, instructorsData] = await Promise.all([
         apiClient.get<Course>(`/api/v1/courses/${courseId}`),
-        apiClient.get<{ items: CourseLesson[] }>(`/api/v1/courses/${courseId}/lessons`),
-        apiClient.get<{ items: Instructor[] }>(`/api/v1/courses/${courseId}/instructors`),
+        apiClient.get<CourseLesson[]>(`/api/v1/courses/${courseId}/lessons`),
+        apiClient.get<Instructor[]>(`/api/v1/courses/${courseId}/instructors`),
       ]);
 
       setCourse(courseData);
-      setLessons(lessonsData.items);
-      setInstructors(instructorsData.items);
+      setLessons(Array.isArray(lessonsData) ? lessonsData : []);
+      setInstructors(Array.isArray(instructorsData) ? instructorsData : []);
       setEditData({
         title: courseData.title,
         description: courseData.description || "",

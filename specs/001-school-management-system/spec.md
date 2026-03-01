@@ -35,14 +35,16 @@ A super-admin creates and manages reusable course syllabuses that define the str
 
 **Why this priority**: The entire system depends on syllabuses. Without them, schools cannot create structured courses. This is foundational to the platform's value proposition.
 
-**Independent Test**: A super-admin can create a syllabus with lessons, create a course from it, and a school admin can verify the course contains the expected lessons and structure. This delivers immediate value by enabling course creation.
+**Independent Test**: A super-admin can create a draft syllabus with lessons, finalize it, and a school admin can create a course from the final version and verify the course contains the expected lessons and structure. This delivers immediate value by enabling course creation.
 
 **Acceptance Scenarios**:
 
-1. **Given** a super-admin is logged in, **When** they create a new syllabus with lesson definitions (topics, duration, requirements), **Then** the syllabus is saved and available for school admins to use
-2. **Given** a syllabus exists, **When** a super-admin edits it, **Then** the changes are saved and visible to admins who browse available syllabuses
-3. **Given** a syllabus is created, **When** a school admin creates a course from it, **Then** the course includes all lessons from the syllabus
-4. **Given** a super-admin creates a syllabus, **When** a school admin uses it, **Then** the admin sees it in their syllabus list for course creation
+1. **Given** a super-admin is logged in, **When** they create a new syllabus with lesson definitions (topics, duration, requirements), **Then** the syllabus is saved in Draft state
+2. **Given** a super-admin has created a draft syllabus, **When** they edit the draft, **Then** the changes are saved without creating a new version
+3. **Given** a super-admin has a draft syllabus, **When** they finalize it, **Then** it becomes a Final version (immutable) with version number 1 and is visible to school admins
+4. **Given** a super-admin has a final syllabus, **When** they edit it, **Then** a new Draft is created as its child and the Final version remains unchanged
+5. **Given** a super-admin creates a system syllabus and finalizes it, **When** school admins browse syllabuses, **Then** they see the system syllabus alongside their school-specific syllabuses
+6. **Given** multiple final versions of a syllabus exist, **When** a school admin creates a course, **Then** they can choose which final version to bind (default is latest final version)
 
 ---
 

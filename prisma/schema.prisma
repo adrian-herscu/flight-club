@@ -29,6 +29,7 @@ model School {
 
   // Relations
   userRoles             UserRole[]
+  syllabuses            Syllabus[]
   courses               Course[]
   studentEnrollments    StudentEnrollment[]
   instructorAssignments InstructorAssignment[]
@@ -91,19 +92,26 @@ enum SyllabusStatus {
 }
 
 model Syllabus {
-  id          Int             @id @default(autoincrement())
-  title       String          @db.VarChar(255)
-  description String?         @db.Text
-  status      SyllabusStatus
-  version     Int
-  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  finalizedAt DateTime?       @map("finalized_at") @db.Timestamptz(3)
+  id               Int             @id @default(autoincrement())
+  title            String          @db.VarChar(255)
+  description      String?         @db.Text
+  status           SyllabusStatus
+  version          Int
+  schoolId         Int?            @map("school_id")
+  parentSyllabusId Int?            @map("parent_syllabus_id")
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  finalizedAt      DateTime?       @map("finalized_at") @db.Timestamptz(3)
 
   // Relations
-  lessons Lesson[]
-  courses Course[]
+  school          School?    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  parentSyllabus  Syllabus?  @relation("SyllabusVersions", fields: [parentSyllabusId], references: [id], onDelete: SetNull)
+  childVersions   Syllabus[] @relation("SyllabusVersions")
+  lessons         Lesson[]
+  courses         Course[]
 
+  @@index([schoolId])
+  @@index([parentSyllabusId])
   @@map("syllabuses")
 }
 

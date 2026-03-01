@@ -149,6 +149,30 @@ export default function SyllabusDetailPage() {
     }
   };
 
+  const handleCreateNewVersion = async () => {
+    if (!syllabus) return;
+    if (
+      !confirm(
+        `Create a new draft version (v${(syllabus.version || 1) + 1}) from this final syllabus? The new draft will copy all lessons.`,
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const newDraft = await apiClient.post<Syllabus>(
+        `/api/v1/syllabuses/${syllabusId}/create-version`,
+        {},
+      );
+      // Navigate to the new draft
+      router.push(`/super-admin/syllabuses/${newDraft.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create new version");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const startEditLesson = (lesson: Lesson) => {
     setEditingLessonId(lesson.id);
     setEditLessonTitle(lesson.title);
@@ -246,6 +270,14 @@ export default function SyllabusDetailPage() {
             This syllabus is published and immutable. Schools can create courses from it. To make
             changes, create a new version.
           </p>
+          <button
+            onClick={handleCreateNewVersion}
+            disabled={saving}
+            className="btn btn-primary"
+            style={{ marginTop: "var(--spacing-md)" }}
+          >
+            {saving ? "Creating..." : "Create New Version"}
+          </button>
         </div>
       )}
 
