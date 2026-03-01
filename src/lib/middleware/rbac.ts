@@ -1,5 +1,5 @@
 import { PrismaClient, RoleType, User } from "@prisma/client";
-import { APIError } from "./error-handler";
+import { APIError } from "../errors";
 
 const prisma = new PrismaClient();
 

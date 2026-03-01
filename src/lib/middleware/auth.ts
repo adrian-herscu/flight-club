@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { PrismaClient, User } from "@prisma/client";
-import { APIError } from "./error-handler";
+import { APIError } from "../errors";
 
 const prisma = new PrismaClient();
 

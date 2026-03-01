@@ -32,3 +32,4 @@ coverage/
 .coverage
 htmlcov/
 *.dylib
+scripts/.dev-server.pid

@@ -99,49 +99,76 @@ async function main() {
         title: "P2 Paragliding Certification",
         description:
           "Complete P2 certification course covering ground handling, flight theory, and basic flight maneuvers",
-        status: "FINAL",
+        status: "DRAFT",
         version: 1,
-        finalizedAt: new Date(),
       },
     });
     console.log("✅ Created sample syllabus");
+  }
 
-    // Add lessons to the syllabus
-    await prisma.lesson.createMany({
-      data: [
-        {
-          syllabusId: syllabus.id,
-          title: "Ground Handling Fundamentals",
-          description: "Learn to control the wing on the ground",
-          order: 1,
-        },
-        {
-          syllabusId: syllabus.id,
-          title: "Flight Theory & Weather",
-          description: "Understanding aerodynamics and weather patterns",
-          order: 2,
-        },
-        {
-          syllabusId: syllabus.id,
-          title: "First Flight",
-          description: "Supervised first flight with instructor",
-          order: 3,
-        },
-        {
-          syllabusId: syllabus.id,
-          title: "Turning & Gliding",
-          description: "Basic flight maneuvers and control",
-          order: 4,
-        },
-        {
-          syllabusId: syllabus.id,
-          title: "Landing Techniques",
-          description: "Safe landing approaches and techniques",
-          order: 5,
-        },
-      ],
+  // Ensure lessons exist for the syllabus (idempotent)
+  const existingLessonsCount = await prisma.lesson.count({
+    where: { syllabusId: syllabus.id },
+  });
+
+  // If a previous failed seed left this syllabus as FINAL with no lessons,
+  // temporarily move it back to DRAFT so lesson inserts are allowed.
+  if (existingLessonsCount === 0 && syllabus.status === "FINAL") {
+    syllabus = await prisma.syllabus.update({
+      where: { id: syllabus.id },
+      data: {
+        status: "DRAFT",
+        finalizedAt: null,
+      },
     });
-    console.log("✅ Created sample lessons");
+  }
+
+  await prisma.lesson.createMany({
+    data: [
+      {
+        syllabusId: syllabus.id,
+        title: "Ground Handling Fundamentals",
+        description: "Learn to control the wing on the ground",
+        order: 1,
+      },
+      {
+        syllabusId: syllabus.id,
+        title: "Flight Theory & Weather",
+        description: "Understanding aerodynamics and weather patterns",
+        order: 2,
+      },
+      {
+        syllabusId: syllabus.id,
+        title: "First Flight",
+        description: "Supervised first flight with instructor",
+        order: 3,
+      },
+      {
+        syllabusId: syllabus.id,
+        title: "Turning & Gliding",
+        description: "Basic flight maneuvers and control",
+        order: 4,
+      },
+      {
+        syllabusId: syllabus.id,
+        title: "Landing Techniques",
+        description: "Safe landing approaches and techniques",
+        order: 5,
+      },
+    ],
+    skipDuplicates: true,
+  });
+  console.log("✅ Ensured sample lessons");
+
+  // Publish syllabus after lessons exist
+  if (syllabus.status !== "FINAL") {
+    syllabus = await prisma.syllabus.update({
+      where: { id: syllabus.id },
+      data: {
+        status: "FINAL",
+        finalizedAt: new Date(),
+      },
+    });
   }
 
   // Create sample instructors
@@ -396,17 +423,22 @@ async function main() {
   });
 
   if (!course2Exists) {
-    // Create P3 syllabus
-    const p3Syllabus = await prisma.syllabus.create({
-      data: {
-        title: "P3 Paragliding Certification",
-        description:
-          "Advanced P3 certification course covering cross-country flying and advanced maneuvers",
-        status: "FINAL",
-        version: 1,
-        finalizedAt: new Date(),
-      },
+    // Create or get P3 syllabus
+    let p3Syllabus = await prisma.syllabus.findFirst({
+      where: { title: "P3 Paragliding Certification" },
     });
+
+    if (!p3Syllabus) {
+      p3Syllabus = await prisma.syllabus.create({
+        data: {
+          title: "P3 Paragliding Certification",
+          description:
+            "Advanced P3 certification course covering cross-country flying and advanced maneuvers",
+          status: "DRAFT",
+          version: 1,
+        },
+      });
+    }
 
     await prisma.lesson.createMany({
       data: [
@@ -435,7 +467,18 @@ async function main() {
           order: 4,
         },
       ],
+      skipDuplicates: true,
     });
+
+    if (p3Syllabus.status !== "FINAL") {
+      p3Syllabus = await prisma.syllabus.update({
+        where: { id: p3Syllabus.id },
+        data: {
+          status: "FINAL",
+          finalizedAt: new Date(),
+        },
+      });
+    }
 
     const course2 = await prisma.course.create({
       data: {
