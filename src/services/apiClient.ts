@@ -1,5 +1,7 @@
 import { getAuthToken, hasSupabaseConfig } from "./supabaseClient";
 import type { ApiResponse } from "./types";
+import pRetry, { AbortError } from "p-retry";
+import { isRetryableError, RETRY_OPTIONS } from "@/lib/retry-utils";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -17,68 +19,95 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  // Try to get token from cookie first (works for both dev and Google auth)
-  let token: string | null = null;
+  return pRetry(
+    async () => {
+      // Try to get token from cookie first (works for both dev and Google auth)
+      let token: string | null = null;
 
-  if (typeof document !== "undefined") {
-    token =
-      document.cookie
-        .split("; ")
-        .find((c) => c.startsWith("sb-access-token="))
-        ?.split("=")[1] || null;
-  }
+      if (typeof document !== "undefined") {
+        token =
+          document.cookie
+            .split("; ")
+            .find((c) => c.startsWith("sb-access-token="))
+            ?.split("=")[1] || null;
+      }
 
-  // Fallback to Supabase session if cookie not found
-  if (!token && hasSupabaseConfig) {
-    token = await getAuthToken();
-  }
+      // Fallback to Supabase session if cookie not found
+      if (!token && hasSupabaseConfig) {
+        token = await getAuthToken();
+      }
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) || {}),
-  };
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...((options.headers as Record<string, string>) || {}),
+      };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers,
+      });
 
-  const requestId = response.headers.get("X-Request-ID") || undefined;
+      const requestId = response.headers.get("X-Request-ID") || undefined;
 
-  if (!response.ok) {
-    let errorData: ApiResponse | null = null;
-    try {
-      errorData = (await response.json()) as ApiResponse;
-    } catch {
-      // ignore JSON parse errors and fall back to generic error below
-    }
+      if (!response.ok) {
+        let errorData: ApiResponse | null = null;
+        try {
+          errorData = (await response.json()) as ApiResponse;
+        } catch {
+          // ignore JSON parse errors and fall back to generic error below
+        }
 
-    throw new ApiError(
-      errorData?.error?.code || "UNKNOWN_ERROR",
-      errorData?.error?.message || "An unexpected error occurred",
-      response.status,
-      errorData?.error?.details,
-      requestId,
-    );
-  }
+        const error = new ApiError(
+          errorData?.error?.code || "UNKNOWN_ERROR",
+          errorData?.error?.message || "An unexpected error occurred",
+          response.status,
+          errorData?.error?.details,
+          requestId,
+        );
 
-  const data: ApiResponse<T> = await response.json();
+        // Don't retry non-transient errors (auth, validation, client errors)
+        if (!isRetryableError(error, response.status)) {
+          throw new AbortError(error);
+        }
 
-  if (!data.success) {
-    throw new ApiError(
-      data.error?.code || "UNKNOWN_ERROR",
-      data.error?.message || "An unexpected error occurred",
-      response.status,
-      data.error?.details,
-      requestId,
-    );
-  }
+        throw error;
+      }
 
-  return data.data as T;
+      const data: ApiResponse<T> = await response.json();
+
+      if (!data.success) {
+        throw new AbortError(
+          new ApiError(
+            data.error?.code || "UNKNOWN_ERROR",
+            data.error?.message || "An unexpected error occurred",
+            response.status,
+            data.error?.details,
+            requestId,
+          ),
+        );
+      }
+
+      return data.data as T;
+    },
+    {
+      retries: RETRY_OPTIONS.maxAttempts - 1,
+      minTimeout: RETRY_OPTIONS.minTimeout,
+      maxTimeout: RETRY_OPTIONS.maxTimeout,
+      onFailedAttempt: (error) => {
+        if (process.env.NODE_ENV === "development") {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.debug(
+            `[API Retry] Attempt ${error.attemptNumber} failed, ${error.retriesLeft} retries left`,
+            { error: errorMessage },
+          );
+        }
+      },
+    },
+  );
 }
 
 export const apiClient = {
