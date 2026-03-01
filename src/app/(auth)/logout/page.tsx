@@ -19,14 +19,7 @@ export default function LogoutPage() {
   }, [router]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-      }}
-    >
+    <div style={{ padding: "2rem" }}>
       <p>Signing out...</p>
     </div>
   );

@@ -97,29 +97,20 @@ export default function InstructorAssignmentForm({
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div style={{ padding: "1.5rem", background: "#f9f9f9", borderRadius: "8px" }}>
-      <h3 style={{ marginTop: 0 }}>Assign Instructor</h3>
+    <div className="assignment-form">
+      <h3 className="mt-0">Assign Instructor</h3>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "1.5rem" }}>
-          <label
-            htmlFor="instructor-select"
-            style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}
-          >
-            Select Instructor <span style={{ color: "#ea4335" }}>*</span>
+        <div className="assignment-form-group">
+          <label htmlFor="instructor-select" className="assignment-form-label">
+            Select Instructor <span className="required-indicator">*</span>
           </label>
           <select
             id="instructor-select"
             value={selectedInstructorId}
             onChange={(e) => setSelectedInstructorId(e.target.value)}
             required
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-            }}
+            className="assignment-form-select"
           >
             <option value="">-- Select an instructor --</option>
             {instructors.map((instructor) => (
@@ -130,24 +121,15 @@ export default function InstructorAssignmentForm({
           </select>
         </div>
 
-        <div style={{ marginBottom: "1.5rem" }}>
-          <label
-            htmlFor="lesson-select"
-            style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}
-          >
+        <div className="assignment-form-group">
+          <label htmlFor="lesson-select" className="assignment-form-label">
             Assign to
           </label>
           <select
             id="lesson-select"
             value={selectedLessonId}
             onChange={(e) => setSelectedLessonId(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-            }}
+            className="assignment-form-select"
           >
             <option value="all">All lessons (course-level assignment)</option>
             <optgroup label="Individual Lessons">
@@ -160,51 +142,21 @@ export default function InstructorAssignmentForm({
               ))}
             </optgroup>
           </select>
-          <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.5rem" }}>
+          <div className="helper-text">
             Course-level assignments apply to all lessons. Individual assignments override
             course-level for that lesson.
           </div>
         </div>
 
-        {error && (
-          <div
-            style={{
-              marginBottom: "1.5rem",
-              padding: "1rem",
-              background: "#fdecea",
-              border: "1px solid #f5c6cb",
-              borderRadius: "4px",
-              color: "#721c24",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        {error && <div className="assignment-conflict-alert">{error}</div>}
 
         {conflicts.length > 0 && (
-          <div
-            style={{
-              marginBottom: "1.5rem",
-              padding: "1rem",
-              background: "#fff3cd",
-              border: "1px solid #ffeeba",
-              borderRadius: "4px",
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: "0.75rem", color: "#856404" }}>
-              ⚠️ Scheduling Conflicts Detected
-            </div>
-            <div style={{ fontSize: "0.875rem", color: "#856404" }}>
+          <div className="assignment-conflict-alert">
+            <div className="conflict-label">⚠️ Scheduling Conflicts Detected</div>
+            <div className="assignment-conflict-lesson">
               The selected instructor is already assigned to overlapping lessons:
             </div>
-            <ul
-              style={{
-                margin: "0.75rem 0 0 0",
-                paddingLeft: "1.5rem",
-                fontSize: "0.875rem",
-                color: "#856404",
-              }}
-            >
+            <ul className="assignment-conflict-list">
               {conflicts.map((conflict) => (
                 <li key={`${conflict.courseId}-${conflict.courseLessonId}`}>
                   <strong>{conflict.courseName}</strong> - {conflict.lessonTitle}
@@ -214,34 +166,19 @@ export default function InstructorAssignmentForm({
                   <br />
                   Location: {conflict.location}
                   <br />
-                  <span style={{ fontSize: "0.8rem", color: "#666" }}>
-                    Duration: {conflict.durationHours}h
-                  </span>
+                  <span className="conflict-duration">Duration: {conflict.durationHours}h</span>
                 </li>
               ))}
             </ul>
-            <div style={{ marginTop: "1rem", fontSize: "0.875rem", color: "#856404" }}>
+            <div className="conflict-warning-text">
               Please select a different instructor or adjust the lesson schedules to resolve
               conflicts.
             </div>
           </div>
         )}
 
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{
-              padding: "0.75rem 1.5rem",
-              background: submitting ? "#ccc" : "#4285f4",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: submitting ? "not-allowed" : "pointer",
-              fontSize: "1rem",
-              fontWeight: 500,
-            }}
-          >
+        <div className="flex-gap-md">
+          <button type="submit" disabled={submitting} className="btn btn-primary">
             {submitting ? "Assigning..." : "Assign Instructor"}
           </button>
           {onCancel && (
@@ -249,14 +186,7 @@ export default function InstructorAssignmentForm({
               type="button"
               onClick={onCancel}
               disabled={submitting}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: "#f5f5f5",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-                cursor: submitting ? "not-allowed" : "pointer",
-                fontSize: "1rem",
-              }}
+              className="btn btn-secondary"
             >
               Cancel
             </button>

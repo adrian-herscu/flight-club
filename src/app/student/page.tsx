@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiClient } from "@/services/apiClient";
+import { useApiData } from "@/lib/hooks/useApiData";
 import { useSchool } from "@/services/schoolContext";
 import Link from "next/link";
 
@@ -33,87 +32,55 @@ interface StudentEnrollment {
 }
 
 export default function StudentPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [enrollments, setEnrollments] = useState<StudentEnrollment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: courses,
+    loading: coursesLoading,
+    error: coursesError,
+  } = useApiData<Course[]>("/api/v1/courses");
+  const {
+    data: enrollments,
+    loading: enrollmentsLoading,
+    error: enrollmentsError,
+  } = useApiData<StudentEnrollment[]>("/api/v1/enrollments");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [coursesData, enrollmentsData] = await Promise.all([
-          apiClient.get<Course[]>("/api/v1/courses"),
-          apiClient.get<StudentEnrollment[]>("/api/v1/enrollments"),
-        ]);
-        setCourses(coursesData || []);
-        setEnrollments(enrollmentsData || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const loading = coursesLoading || enrollmentsLoading;
+  const error = coursesError || enrollmentsError;
 
   if (loading) {
-    return <div style={{ padding: "2rem" }}>Loading...</div>;
+    return <div className="p-2xl">Loading...</div>;
   }
 
-  const enrolledCourses = enrollments.filter((e) => e.status === "enrolled");
-  const pendingCourses = enrollments.filter((e) => e.status === "pending_approval");
-  const availableCourses = courses.filter(
-    (c) => !enrollments.some((e) => e.courseId === c.id && e.status !== "rejected"),
+  const enrolledCourses = (enrollments || []).filter((e) => e.status === "enrolled");
+  const pendingCourses = (enrollments || []).filter((e) => e.status === "pending_approval");
+  const availableCourses = (courses || []).filter(
+    (c) => !(enrollments || []).some((e) => e.courseId === c.id && e.status !== "rejected"),
   );
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div className="p-2xl">
       <h1>Student Dashboard</h1>
       <p>View your courses and manage enrollments.</p>
 
       {error && (
-        <div
-          style={{
-            padding: "1rem",
-            backgroundColor: "#f8d7da",
-            borderRadius: "4px",
-            marginBottom: "2rem",
-          }}
-        >
-          <p style={{ margin: 0, color: "#721c24" }}>{error}</p>
+        <div className="error-box">
+          <p className="error-text">{error}</p>
         </div>
       )}
 
-      <div style={{ marginTop: "2rem" }}>
+      <div className="mt-2xl">
         <h2>Your Enrollments ({enrolledCourses.length})</h2>
         {enrolledCourses.length === 0 ? (
-          <p style={{ color: "#666" }}>You're not enrolled in any courses yet.</p>
+          <p className="muted-text\">You&apos;re not enrolled in any courses yet.</p>
         ) : (
           <div>
             {enrolledCourses.map((enrollment) => (
-              <div
-                key={enrollment.id}
-                style={{
-                  padding: "1rem",
-                  backgroundColor: "#d4edda",
-                  border: "1px solid #c3e6cb",
-                  borderRadius: "4px",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <h3 style={{ margin: "0 0 0.5rem 0" }}>
-                  <Link
-                    href={`/student/courses/${enrollment.courseId}`}
-                    style={{ color: "#155724", textDecoration: "none" }}
-                  >
+              <div key={enrollment.id} className="card mb-md">
+                <h3 className="card-title">
+                  <Link href={`/student/courses/${enrollment.courseId}`} className="link-primary">
                     Course #{enrollment.courseId}
                   </Link>
                 </h3>
-                <p style={{ margin: "0", fontSize: "0.9rem", color: "#155724" }}>
-                  Status: Enrolled
-                </p>
+                <p className="text-muted">Status: Enrolled</p>
               </div>
             ))}
           </div>
@@ -121,67 +88,42 @@ export default function StudentPage() {
       </div>
 
       {pendingCourses.length > 0 && (
-        <div style={{ marginTop: "2rem" }}>
+        <div className="mt-2xl">
           <h2>Pending Requests ({pendingCourses.length})</h2>
           <div>
             {pendingCourses.map((enrollment) => (
-              <div
-                key={enrollment.id}
-                style={{
-                  padding: "1rem",
-                  backgroundColor: "#fff3cd",
-                  border: "1px solid #ffeaa7",
-                  borderRadius: "4px",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <p style={{ margin: "0", fontSize: "0.9rem", color: "#856404" }}>
-                  Course #{enrollment.courseId} - Awaiting approval
-                </p>
+              <div key={enrollment.id} className="card mb-md bg-warning">
+                <p className="text-warning">Course #{enrollment.courseId} - Awaiting approval</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div style={{ marginTop: "2rem" }}>
+      <div className="mt-2xl">
         <h2>Available Courses ({availableCourses.length})</h2>
         {availableCourses.length === 0 ? (
-          <p style={{ color: "#666" }}>No available courses at this time.</p>
+          <p className="muted-text">No available courses at this time.</p>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="w-full">
             <thead>
-              <tr style={{ backgroundColor: "#f5f5f5", borderBottom: "2px solid #ddd" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left" }}>Name</th>
-                <th style={{ padding: "0.75rem", textAlign: "left" }}>Status</th>
-                <th style={{ padding: "0.75rem", textAlign: "left" }}>Start Date</th>
-                <th style={{ padding: "0.75rem", textAlign: "left" }}>Action</th>
+              <tr className="border-bottom-thick">
+                <th className="px-md text-left">Name</th>
+                <th className="px-md text-left">Status</th>
+                <th className="px-md text-left">Start Date</th>
+                <th className="px-md text-left">Action</th>
               </tr>
             </thead>
             <tbody>
               {availableCourses.map((course) => (
-                <tr key={course.id} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "0.75rem" }}>{course.name}</td>
-                  <td style={{ padding: "0.75rem" }}>
-                    <span
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        backgroundColor: "#e7f3ff",
-                        borderRadius: "3px",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      {course.status}
-                    </span>
+                <tr key={course.id} className="border-bottom-light">
+                  <td className="px-md">{course.name}</td>
+                  <td className="px-md">
+                    <span className="badge">{course.status}</span>
                   </td>
-                  <td style={{ padding: "0.75rem" }}>
-                    {new Date(course.startDate).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: "0.75rem" }}>
-                    <Link
-                      href={`/student/courses/${course.id}`}
-                      style={{ color: "#007bff", textDecoration: "none", fontSize: "0.9rem" }}
-                    >
+                  <td className="px-md">{new Date(course.startDate).toLocaleDateString()}</td>
+                  <td className="px-md">
+                    <Link href={`/student/courses/${course.id}`} className="link-primary">
                       View
                     </Link>
                   </td>
@@ -192,18 +134,11 @@ export default function StudentPage() {
         )}
       </div>
 
-      <div
-        style={{
-          marginTop: "2rem",
-          padding: "1rem",
-          backgroundColor: "#f5f5f5",
-          borderRadius: "4px",
-        }}
-      >
+      <div className="mt-2xl">
         <h3>Quick Actions</h3>
-        <ul style={{ margin: 0 }}>
+        <ul style={{ listStyle: "none", padding: 0 }}>
           <li>
-            <Link href="/student/courses" style={{ color: "#007bff" }}>
+            <Link href="/student/courses" className="link-primary">
               Browse All Courses
             </Link>
           </li>

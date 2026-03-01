@@ -117,7 +117,7 @@ export default function InstructorLessonDetailPage() {
   };
 
   if (loading) return <div>Loading lesson details...</div>;
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error) return <div className="error-text">Error: {error}</div>;
   if (!lesson) return <div>Lesson not found</div>;
 
   const allEvaluated = students.every((student) =>
@@ -130,47 +130,24 @@ export default function InstructorLessonDetailPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <button
-          onClick={() => router.push("/instructor/schedule")}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#f5f5f5",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-            cursor: "pointer",
-            marginBottom: "1rem",
-          }}
-        >
+      <div className="header-section">
+        <button onClick={() => router.push("/instructor/schedule")} className="back-button">
           ← Back to Schedule
         </button>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div className="header-row">
           <div>
-            {lesson.course_title && (
-              <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.5rem" }}>
-                {lesson.course_title}
-              </div>
-            )}
-            <h1 style={{ margin: "0 0 0.5rem 0" }}>
+            {lesson.course_title && <div className="course-label">{lesson.course_title}</div>}
+            <h1 className="page-title">
               Lesson {lesson.sequence_order}: {lesson.title}
             </h1>
-            {lesson.description && <p style={{ color: "#666", margin: 0 }}>{lesson.description}</p>}
+            {lesson.description && <p className="muted-paragraph">{lesson.description}</p>}
           </div>
           {canComplete && (
             <button
               onClick={handleCompleteLesson}
               disabled={completing}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: completing ? "#ccc" : "#34a853",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: completing ? "not-allowed" : "pointer",
-                fontSize: "1rem",
-                fontWeight: 600,
-              }}
+              className="btn btn-success"
             >
               {completing ? "Completing..." : "Complete Lesson"}
             </button>
@@ -178,45 +155,28 @@ export default function InstructorLessonDetailPage() {
         </div>
 
         {/* Lesson Details */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1rem",
-            marginTop: "1.5rem",
-          }}
-        >
-          <div style={{ padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-            <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.25rem" }}>
-              Duration
-            </div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
-              {lesson.duration_hours} hours
-            </div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-label">Duration</div>
+            <div className="stat-value-large">{lesson.duration_hours} hours</div>
           </div>
           {lesson.start_time && (
-            <div style={{ padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-              <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.25rem" }}>
-                Scheduled
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: 500 }}>
+            <div className="stat-card">
+              <div className="stat-label">Scheduled</div>
+              <div className="stat-value-medium">
                 {new Date(lesson.start_time).toLocaleString()}
               </div>
             </div>
           )}
           {lesson.location && (
-            <div style={{ padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-              <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.25rem" }}>
-                Location
-              </div>
-              <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>{lesson.location}</div>
+            <div className="stat-card">
+              <div className="stat-label">Location</div>
+              <div className="stat-value-large">{lesson.location}</div>
             </div>
           )}
-          <div style={{ padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-            <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.25rem" }}>
-              Evaluated
-            </div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
+          <div className="stat-card">
+            <div className="stat-label">Evaluated</div>
+            <div className="stat-value-large">
               {evaluations.filter((e) => e.result && e.result !== "not_attempted").length} /{" "}
               {students.length}
             </div>
@@ -226,24 +186,17 @@ export default function InstructorLessonDetailPage() {
 
       {/* Evaluation Forms */}
       <div>
-        <h2 style={{ marginBottom: "1rem" }}>Student Evaluations</h2>
+        <h2 className="section-title">Student Evaluations</h2>
         {lesson.status === "completed" && (
-          <div
-            style={{
-              padding: "1rem",
-              background: "#e6f4ea",
-              borderRadius: "8px",
-              marginBottom: "1.5rem",
-            }}
-          >
-            <strong style={{ color: "#137333" }}>✓ Lesson Completed</strong>
-            <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem", color: "#137333" }}>
+          <div className="completed-box">
+            <strong className="completed-strong">✓ Lesson Completed</strong>
+            <p className="completed-text">
               All evaluations are finalized. Students have been notified of their feedback.
             </p>
           </div>
         )}
 
-        <div style={{ display: "grid", gap: "2rem" }}>
+        <div className="evaluation-grid">
           {students.map((student) => {
             const evaluation = getEvaluationForStudent(student.user_id);
             return (

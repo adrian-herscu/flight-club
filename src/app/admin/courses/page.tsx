@@ -60,49 +60,26 @@ export default function AdminCoursesPage() {
     }
   };
 
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error) return <div className="error-text">Error: {error}</div>;
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "2rem",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Manage Courses</h1>
-        <button
-          onClick={() => router.push("/admin/courses/new")}
-          style={{
-            padding: "0.75rem 1.5rem",
-            background: "#4285f4",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "1rem",
-          }}
-        >
+      <div className="header-row">
+        <h1>Manage Courses</h1>
+        <button onClick={() => router.push("/admin/courses/new")} className="btn btn-primary">
           + Create New Course
         </button>
       </div>
 
-      <div style={{ marginBottom: "2rem", display: "flex", gap: "1rem", alignItems: "center" }}>
-        <label htmlFor="status-filter" style={{ fontWeight: 500 }}>
+      <div className="mb-2xl flex-gap-md flex-center-items">
+        <label htmlFor="status-filter" className="font-medium">
           Filter by status:
         </label>
         <select
           id="status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          style={{
-            padding: "0.5rem",
-            borderRadius: "4px",
-            border: "1px solid #ddd",
-            fontSize: "1rem",
-          }}
+          className="form-select"
         >
           <option value="all">All</option>
           <option value="planned">Planned</option>
@@ -115,83 +92,33 @@ export default function AdminCoursesPage() {
       {loading ? (
         <div>Loading courses...</div>
       ) : courses.length === 0 ? (
-        <div
-          style={{
-            padding: "3rem",
-            textAlign: "center",
-            background: "#f5f5f5",
-            borderRadius: "8px",
-          }}
-        >
-          <p style={{ fontSize: "1.125rem", marginBottom: "1rem" }}>No courses found</p>
-          <p style={{ color: "#666", marginBottom: "2rem" }}>
+        <div className="empty-state">
+          <p className="empty-state-title">No courses found</p>
+          <p className="empty-state-subtitle">
             {statusFilter !== "all"
               ? `No ${statusFilter} courses. Try changing the filter.`
               : "Get started by creating your first course from a syllabus."}
           </p>
-          <button
-            onClick={() => router.push("/admin/courses/new")}
-            style={{
-              padding: "0.75rem 1.5rem",
-              background: "#4285f4",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "1rem",
-            }}
-          >
+          <button onClick={() => router.push("/admin/courses/new")} className="btn btn-primary">
             Create New Course
           </button>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: "1.5rem" }}>
+        <div className="card-grid">
           {courses.map((course) => (
             <div
               key={course.id}
               onClick={() => router.push(`/admin/courses/${course.id}`)}
-              style={{
-                padding: "1.5rem",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                background: "white",
-                cursor: "pointer",
-                transition: "box-shadow 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              className="card card-clickable"
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "1rem",
-                }}
-              >
+              <div className="card-header">
                 <div>
-                  <h3 style={{ margin: "0 0 0.5rem 0" }}>{course.title}</h3>
+                  <h3 className="card-title">{course.title}</h3>
                   {course.syllabus_title && (
-                    <p style={{ margin: 0, fontSize: "0.875rem", color: "#666" }}>
-                      Based on: {course.syllabus_title}
-                    </p>
+                    <p className="muted-small">Based on: {course.syllabus_title}</p>
                   )}
                 </div>
-                <span
-                  style={{
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: "12px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    color: "white",
-                    background: getStatusColor(course.status),
-                  }}
-                >
+                <span className="badge" style={{ background: getStatusColor(course.status) }}>
                   {course.status}
                 </span>
               </div>
@@ -202,7 +129,7 @@ export default function AdminCoursesPage() {
                 </p>
               )}
 
-              <div style={{ display: "flex", gap: "2rem", fontSize: "0.875rem", color: "#666" }}>
+              <div className="meta-row">
                 <div>
                   <strong>Enrolled:</strong> {course.enrolled_count ?? 0}
                   {course.max_students && ` / ${course.max_students}`}

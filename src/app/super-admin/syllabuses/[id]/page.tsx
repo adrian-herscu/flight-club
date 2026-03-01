@@ -32,17 +32,14 @@ export default function SyllabusDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Edit syllabus state
   const [isEditingSyllabus, setIsEditingSyllabus] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
-  // Add lesson state
   const [showAddLesson, setShowAddLesson] = useState(false);
   const [newLessonTitle, setNewLessonTitle] = useState("");
   const [newLessonDescription, setNewLessonDescription] = useState("");
 
-  // Edit lesson state
   const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
   const [editLessonTitle, setEditLessonTitle] = useState("");
   const [editLessonDescription, setEditLessonDescription] = useState("");
@@ -88,8 +85,9 @@ export default function SyllabusDetailPage() {
       !confirm(
         "Publish this syllabus? Once published it becomes immutable and available for schools to use.",
       )
-    )
+    ) {
       return;
+    }
     setSaving(true);
     try {
       await apiClient.post(`/api/v1/syllabuses/${syllabusId}/publish`, {});
@@ -106,7 +104,6 @@ export default function SyllabusDetailPage() {
     const nextOrder = (syllabus?.lessons.length ?? 0) + 1;
     setSaving(true);
     try {
-      // Route: /api/v1/syllabuses/[id]/[syllabusId]/lessons
       await apiClient.post(`/api/v1/syllabuses/${syllabusId}/${syllabusId}/lessons`, {
         title: newLessonTitle.trim(),
         description: newLessonDescription.trim() || undefined,
@@ -161,173 +158,80 @@ export default function SyllabusDetailPage() {
   const isDraft = syllabus?.status === "DRAFT";
 
   if (loading) return <div>Loading syllabus...</div>;
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error) return <div className="error-text">Error: {error}</div>;
   if (!syllabus) return <div>Syllabus not found</div>;
 
   return (
     <div>
-      {/* Back nav */}
-      <button
-        onClick={() => router.push("/super-admin/syllabuses")}
-        style={{
-          padding: "0.5rem 1rem",
-          background: "#f5f5f5",
-          border: "1px solid #ddd",
-          borderRadius: "4px",
-          cursor: "pointer",
-          marginBottom: "1.5rem",
-        }}
-      >
+      <button onClick={() => router.push("/super-admin/syllabuses")} className="back-button">
         ← Back to Syllabuses
       </button>
 
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "2rem",
-        }}
-      >
+      <div className="header-section">
         <div>
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.5rem" }}
-          >
-            <h1 style={{ margin: 0 }}>{syllabus.title}</h1>
+          <div className="header-row">
+            <h1 className="page-title">{syllabus.title}</h1>
             <span
-              style={{
-                padding: "0.25rem 0.75rem",
-                borderRadius: "12px",
-                fontSize: "0.875rem",
-                background: syllabus.status === "FINAL" ? "#e8f5e9" : "#fff3e0",
-                color: syllabus.status === "FINAL" ? "#2e7d32" : "#e65100",
-              }}
+              className={`badge badge-large ${
+                syllabus.status === "FINAL" ? "status-final" : "status-draft"
+              }`}
             >
               {syllabus.status} v{syllabus.version}
             </span>
           </div>
-          {syllabus.description && (
-            <p style={{ color: "#666", margin: 0 }}>{syllabus.description}</p>
-          )}
+          {syllabus.description && <p className="muted-paragraph">{syllabus.description}</p>}
           {syllabus.finalizedAt && (
-            <p style={{ color: "#888", fontSize: "0.875rem", margin: "0.25rem 0 0 0" }}>
+            <p className="muted-text">
               Published: {new Date(syllabus.finalizedAt).toLocaleDateString()}
             </p>
           )}
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem" }}>
+        <div className="header-row" style={{ gap: "var(--spacing-md)" }}>
           {isDraft && (
-            <button
-              onClick={() => setIsEditingSyllabus(true)}
-              style={{
-                padding: "0.5rem 1rem",
-                background: "#1976d2",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={() => setIsEditingSyllabus(true)} className="btn btn-primary">
               Edit Details
             </button>
           )}
           {isDraft && syllabus.lessons.length > 0 && (
-            <button
-              onClick={handlePublish}
-              disabled={saving}
-              style={{
-                padding: "0.5rem 1rem",
-                background: saving ? "#ccc" : "#34a853",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: saving ? "not-allowed" : "pointer",
-                fontWeight: 600,
-              }}
-            >
+            <button onClick={handlePublish} disabled={saving} className="btn btn-success">
               {saving ? "Publishing..." : "Publish Syllabus"}
             </button>
           )}
         </div>
       </div>
 
-      {/* Edit syllabus form */}
       {isEditingSyllabus && (
-        <div
-          style={{
-            background: "#f9f9f9",
-            padding: "1.5rem",
-            borderRadius: "8px",
-            marginBottom: "2rem",
-            border: "1px solid #ddd",
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>Edit Syllabus Details</h3>
-          <div style={{ display: "grid", gap: "1rem", maxWidth: "600px" }}>
-            <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-                Title
-              </label>
+        <div className="edit-panel">
+          <h3 className="section-title">Edit Syllabus Details</h3>
+          <div className="edit-grid">
+            <div className="field-group">
+              <label className="field-label">Title</label>
               <input
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem",
-                  boxSizing: "border-box",
-                }}
+                className="field-input"
               />
             </div>
-            <div>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-                Description
-              </label>
+            <div className="field-group">
+              <label className="field-label">Description</label>
               <textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 rows={3}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem",
-                  fontFamily: "inherit",
-                  boxSizing: "border-box",
-                }}
+                className="field-textarea"
               />
             </div>
-            <div style={{ display: "flex", gap: "0.75rem" }}>
+            <div className="form-actions">
               <button
                 onClick={handleSaveSyllabus}
                 disabled={saving || !editTitle.trim()}
-                style={{
-                  padding: "0.5rem 1.5rem",
-                  background: saving ? "#ccc" : "#1976d2",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
+                className="submit-button"
               >
                 {saving ? "Saving..." : "Save"}
               </button>
-              <button
-                onClick={() => setIsEditingSyllabus(false)}
-                style={{
-                  padding: "0.5rem 1.5rem",
-                  background: "#f5f5f5",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={() => setIsEditingSyllabus(false)} className="cancel-button">
                 Cancel
               </button>
             </div>
@@ -335,190 +239,99 @@ export default function SyllabusDetailPage() {
         </div>
       )}
 
-      {/* Info banner for FINAL syllabuses */}
       {!isDraft && (
-        <div
-          style={{
-            padding: "1rem",
-            background: "#e8f5e9",
-            borderRadius: "8px",
-            marginBottom: "2rem",
-            border: "1px solid #c8e6c9",
-          }}
-        >
-          <strong style={{ color: "#2e7d32" }}>✓ Published Syllabus</strong>
-          <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.875rem", color: "#388e3c" }}>
+        <div className="info-banner">
+          <strong className="info-text">✓ Published Syllabus</strong>
+          <p className="info-text">
             This syllabus is published and immutable. Schools can create courses from it. To make
             changes, create a new version.
           </p>
         </div>
       )}
 
-      {/* Lessons */}
       <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1rem",
-          }}
-        >
-          <h2 style={{ margin: 0 }}>Lessons ({syllabus.lessons.length})</h2>
+        <div className="lessons-section">
+          <h2 className="lessons-title">Lessons ({syllabus.lessons.length})</h2>
           {isDraft && (
-            <button
-              onClick={() => setShowAddLesson(true)}
-              style={{
-                padding: "0.5rem 1rem",
-                background: "#4285f4",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={() => setShowAddLesson(true)} className="btn btn-primary">
               + Add Lesson
             </button>
           )}
         </div>
 
         {syllabus.lessons.length === 0 ? (
-          <p style={{ color: "#888", fontStyle: "italic" }}>
+          <p className="empty-lessons">
             No lessons yet. Add at least one lesson before publishing.
           </p>
         ) : (
-          <div style={{ display: "grid", gap: "1rem" }}>
+          <div className="lessons-grid">
             {syllabus.lessons
               .sort((a, b) => a.order - b.order)
               .map((lesson) => (
-                <div
-                  key={lesson.id}
-                  style={{
-                    padding: "1.25rem",
-                    border: "1px solid #ddd",
-                    borderRadius: "8px",
-                    background: "white",
-                  }}
-                >
+                <div key={lesson.id} className="card">
                   {editingLessonId === lesson.id ? (
-                    <div style={{ display: "grid", gap: "0.75rem" }}>
+                    <div className="edit-grid">
                       <input
                         type="text"
                         value={editLessonTitle}
                         onChange={(e) => setEditLessonTitle(e.target.value)}
-                        style={{
-                          padding: "0.5rem",
-                          border: "1px solid #ddd",
-                          borderRadius: "4px",
-                          fontSize: "1rem",
-                        }}
+                        className="field-input"
                       />
                       <textarea
                         value={editLessonDescription}
                         onChange={(e) => setEditLessonDescription(e.target.value)}
                         rows={2}
                         placeholder="Description (optional)"
-                        style={{
-                          padding: "0.5rem",
-                          border: "1px solid #ddd",
-                          borderRadius: "4px",
-                          fontSize: "0.875rem",
-                          fontFamily: "inherit",
-                        }}
+                        className="field-textarea"
                       />
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div className="form-actions">
                         <button
                           onClick={() => handleSaveLesson(lesson.id)}
                           disabled={saving}
-                          style={{
-                            padding: "0.4rem 1rem",
-                            background: "#34a853",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontSize: "0.875rem",
-                          }}
+                          className="submit-button"
                         >
                           Save
                         </button>
-                        <button
-                          onClick={() => setEditingLessonId(null)}
-                          style={{
-                            padding: "0.4rem 1rem",
-                            background: "#f5f5f5",
-                            border: "1px solid #ddd",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontSize: "0.875rem",
-                          }}
-                        >
+                        <button onClick={() => setEditingLessonId(null)} className="cancel-button">
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                          <span style={{ fontWeight: 600, color: "#888", fontSize: "0.875rem" }}>
-                            #{lesson.order}
-                          </span>
-                          <strong style={{ fontSize: "1rem" }}>{lesson.title}</strong>
+                    <div className="card-body">
+                      <div className="header-row">
+                        <div>
+                          <div className="header-row">
+                            <span className="badge"># {lesson.order}</span>
+                            <strong className="card-title">{lesson.title}</strong>
+                          </div>
+                          {lesson.description && <p className="muted-text">{lesson.description}</p>}
                         </div>
-                        {lesson.description && (
-                          <p
-                            style={{ margin: "0.25rem 0 0 0", color: "#666", fontSize: "0.875rem" }}
-                          >
-                            {lesson.description}
-                          </p>
+                        {isDraft && (
+                          <div className="header-row" style={{ gap: "var(--spacing-sm)" }}>
+                            <button
+                              onClick={() => startEditLesson(lesson)}
+                              className="btn btn-primary"
+                              style={{
+                                fontSize: "0.85rem",
+                                padding: "var(--spacing-xs) var(--spacing-md)",
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLesson(lesson.id, lesson.title)}
+                              className="btn btn-danger"
+                              style={{
+                                fontSize: "0.85rem",
+                                padding: "var(--spacing-xs) var(--spacing-md)",
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         )}
                       </div>
-                      {isDraft && (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "0.5rem",
-                            flexShrink: 0,
-                            marginLeft: "1rem",
-                          }}
-                        >
-                          <button
-                            onClick={() => startEditLesson(lesson)}
-                            style={{
-                              padding: "0.35rem 0.75rem",
-                              background: "#1976d2",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              fontSize: "0.8rem",
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLesson(lesson.id, lesson.title)}
-                            style={{
-                              padding: "0.35rem 0.75rem",
-                              background: "#d32f2f",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              fontSize: "0.8rem",
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -526,59 +339,30 @@ export default function SyllabusDetailPage() {
           </div>
         )}
 
-        {/* Add lesson inline form */}
         {showAddLesson && (
-          <div
-            style={{
-              marginTop: "1rem",
-              padding: "1.25rem",
-              border: "2px dashed #4285f4",
-              borderRadius: "8px",
-              background: "#f8f9ff",
-            }}
-          >
-            <h4 style={{ margin: "0 0 1rem 0", color: "#1976d2" }}>
-              New Lesson #{syllabus.lessons.length + 1}
-            </h4>
-            <div style={{ display: "grid", gap: "0.75rem" }}>
+          <div className="add-lesson-panel">
+            <h4 className="add-lesson-title">New Lesson #{syllabus.lessons.length + 1}</h4>
+            <div className="add-lesson-grid">
               <input
                 type="text"
                 value={newLessonTitle}
                 onChange={(e) => setNewLessonTitle(e.target.value)}
                 placeholder="Lesson title *"
                 autoFocus
-                style={{
-                  padding: "0.625rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem",
-                }}
+                className="field-input"
               />
               <textarea
                 value={newLessonDescription}
                 onChange={(e) => setNewLessonDescription(e.target.value)}
                 placeholder="Description (optional)"
                 rows={2}
-                style={{
-                  padding: "0.625rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "0.875rem",
-                  fontFamily: "inherit",
-                }}
+                className="field-textarea"
               />
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="add-lesson-actions">
                 <button
                   onClick={handleAddLesson}
                   disabled={saving || !newLessonTitle.trim()}
-                  style={{
-                    padding: "0.5rem 1.25rem",
-                    background: saving ? "#ccc" : "#4285f4",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: saving ? "not-allowed" : "pointer",
-                  }}
+                  className="add-lesson-submit"
                 >
                   {saving ? "Adding..." : "Add Lesson"}
                 </button>
@@ -588,13 +372,7 @@ export default function SyllabusDetailPage() {
                     setNewLessonTitle("");
                     setNewLessonDescription("");
                   }}
-                  style={{
-                    padding: "0.5rem 1.25rem",
-                    background: "#f5f5f5",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
+                  className="add-lesson-cancel"
                 >
                   Cancel
                 </button>

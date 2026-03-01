@@ -1,9 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import * as schoolsService from "@/lib/services/schools.service";
-import { successResponse, handleError } from "@/lib/middleware/error-handler";
-import { getCurrentUser } from "@/lib/middleware/auth";
 import { requireSuperAdmin, requireAdmin } from "@/lib/middleware/rbac";
-import { getOrGenerateRequestId } from "@/lib/middleware/request-id";
+import { createApiRoute } from "@/lib/api-handler";
 import { z } from "zod";
 
 const updateSchoolSchema = z.object({
@@ -13,50 +11,23 @@ const updateSchoolSchema = z.object({
   contactPhone: z.string().optional(),
 });
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
-  try {
-    const requestId = getOrGenerateRequestId(request.headers);
-    const user = await getCurrentUser(request.headers.get("authorization") || "");
-    const schoolId = parseInt(context.params.id);
+export const GET = createApiRoute(async (request, user, context) => {
+  const schoolId = parseInt(context.params.id);
+  const school = await schoolsService.getSchoolById(schoolId);
+  return { data: school, status: 200 };
+});
 
-    // GET /schools/:id - Get school details
-    const school = await schoolsService.getSchoolById(schoolId);
-    return NextResponse.json(successResponse(school, requestId), { status: 200 });
-  } catch (error) {
-    const { status, body } = handleError(error);
-    return NextResponse.json(body, { status });
-  }
-}
+export const PATCH = createApiRoute(async (request, user, context) => {
+  const schoolId = parseInt(context.params.id);
+  await requireAdmin(user, schoolId);
+  const data = updateSchoolSchema.parse(await request.json());
+  const school = await schoolsService.updateSchool(schoolId, data);
+  return { data: school, status: 200 };
+});
 
-export async function PATCH(request: NextRequest, context: { params: { id: string } }) {
-  try {
-    const requestId = getOrGenerateRequestId(request.headers);
-    const user = await getCurrentUser(request.headers.get("authorization") || "");
-    const schoolId = parseInt(context.params.id);
-
-    // PATCH /schools/:id - Update school (admin only)
-    await requireAdmin(user, schoolId);
-    const data = updateSchoolSchema.parse(await request.json());
-    const school = await schoolsService.updateSchool(schoolId, data);
-    return NextResponse.json(successResponse(school, requestId), { status: 200 });
-  } catch (error) {
-    const { status, body } = handleError(error);
-    return NextResponse.json(body, { status });
-  }
-}
-
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
-  try {
-    const requestId = getOrGenerateRequestId(request.headers);
-    const user = await getCurrentUser(request.headers.get("authorization") || "");
-    const schoolId = parseInt(context.params.id);
-
-    // DELETE /schools/:id - Delete school (super-admin only)
-    await requireSuperAdmin(user);
-    await schoolsService.deleteSchool(schoolId);
-    return NextResponse.json(successResponse(null, requestId), { status: 204 });
-  } catch (error) {
-    const { status, body } = handleError(error);
-    return NextResponse.json(body, { status });
-  }
-}
+export const DELETE = createApiRoute(async (request, user, context) => {
+  const schoolId = parseInt(context.params.id);
+  await requireSuperAdmin(user);
+  await schoolsService.deleteSchool(schoolId);
+  return { data: null, status: 204 };
+});

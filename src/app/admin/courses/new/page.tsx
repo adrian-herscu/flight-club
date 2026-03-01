@@ -95,77 +95,37 @@ export default function NewCoursePage() {
 
   return (
     <div>
-      <button
-        onClick={() => router.push("/admin/courses")}
-        style={{
-          padding: "0.5rem 1rem",
-          background: "#f5f5f5",
-          border: "1px solid #ddd",
-          borderRadius: "4px",
-          cursor: "pointer",
-          marginBottom: "1.5rem",
-        }}
-      >
+      <button onClick={() => router.push("/admin/courses")} className="back-button">
         ← Back to Courses
       </button>
 
-      <h1 style={{ marginBottom: "0.5rem" }}>Create New Course</h1>
-      <p style={{ color: "#666", marginBottom: "2rem" }}>
+      <h1 className="page-title">Create New Course</h1>
+      <p className="muted-paragraph">
         Create a course based on a published syllabus for
         {currentSchool ? <strong> {currentSchool.name}</strong> : " your school"}.
       </p>
 
       {!currentSchool && (
-        <div
-          style={{
-            padding: "1rem",
-            background: "#fff3e0",
-            border: "1px solid #ffe0b2",
-            borderRadius: "4px",
-            marginBottom: "1.5rem",
-            color: "#e65100",
-          }}
-        >
+        <div className="warning-box">
           ⚠️ No school selected. Use the school switcher in the sidebar to select a school.
         </div>
       )}
 
-      {error && (
-        <div
-          style={{
-            padding: "1rem",
-            background: "#fdecea",
-            border: "1px solid #f5c6cb",
-            borderRadius: "4px",
-            marginBottom: "1.5rem",
-            color: "#721c24",
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <div className="error-box">{error}</div>}
 
-      <form onSubmit={handleSubmit} style={{ maxWidth: "600px" }}>
-        {/* Syllabus */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Syllabus <span style={{ color: "#d32f2f" }}>*</span>
+      <form onSubmit={handleSubmit}>
+        <div className="field-group">
+          <label className="field-label">
+            Syllabus <span className="required">*</span>
           </label>
           {loadingSyllabuses ? (
-            <div style={{ color: "#888", fontSize: "0.875rem" }}>Loading syllabuses...</div>
+            <div className="helper-text">Loading syllabuses...</div>
           ) : syllabuses.length > 0 ? (
             <select
               value={form.syllabusId}
               onChange={(e) => field("syllabusId", e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
+              className="field-input"
             >
               <option value="">— Select a syllabus —</option>
               {syllabuses.map((s) => (
@@ -182,26 +142,18 @@ export default function NewCoursePage() {
                 onChange={(e) => field("syllabusId", e.target.value)}
                 placeholder="Enter syllabus ID"
                 required
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem",
-                  boxSizing: "border-box",
-                }}
+                className="field-input"
               />
-              <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.8rem", color: "#888" }}>
+              <p className="helper-text">
                 No published syllabuses found. Ask a super-admin to create and publish one first.
               </p>
             </div>
           )}
         </div>
 
-        {/* Course name */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Course Name <span style={{ color: "#d32f2f" }}>*</span>
+        <div className="field-group">
+          <label className="field-label">
+            Course Name <span className="required">*</span>
           </label>
           <input
             type="text"
@@ -210,43 +162,24 @@ export default function NewCoursePage() {
             placeholder="e.g. P2 Paragliding — Spring 2026 Cohort"
             required
             autoFocus={!preselectedSyllabusId}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              boxSizing: "border-box",
-            }}
+            className="field-input"
           />
         </div>
 
-        {/* Description */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Description
-          </label>
+        <div className="field-group">
+          <label className="field-label">Description</label>
           <textarea
             value={form.description}
             onChange={(e) => field("description", e.target.value)}
             placeholder="Additional details about this course run"
             rows={3}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              fontFamily: "inherit",
-              boxSizing: "border-box",
-            }}
+            className="field-textarea"
           />
         </div>
 
-        {/* Max students */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Max Students <span style={{ color: "#d32f2f" }}>*</span>
+        <div className="field-group">
+          <label className="field-label">
+            Max Students <span className="required">*</span>
           </label>
           <input
             type="number"
@@ -255,94 +188,45 @@ export default function NewCoursePage() {
             placeholder="e.g. 8"
             min={1}
             required
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              boxSizing: "border-box",
-            }}
+            className="field-input"
           />
         </div>
 
-        {/* Dates */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "1rem",
-            marginBottom: "2rem",
-          }}
-        >
+        <div className="grid-gap-lg" style={{ gridTemplateColumns: "1fr 1fr" }}>
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-              Start Date <span style={{ color: "#d32f2f" }}>*</span>
+            <label className="field-label">
+              Start Date <span className="required">*</span>
             </label>
             <input
               type="datetime-local"
               value={form.startDate}
               onChange={(e) => field("startDate", e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-                fontSize: "0.9rem",
-                boxSizing: "border-box",
-              }}
+              className="field-input"
             />
           </div>
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-              End Date <span style={{ color: "#d32f2f" }}>*</span>
+            <label className="field-label">
+              End Date <span className="required">*</span>
             </label>
             <input
               type="datetime-local"
               value={form.endDate}
               onChange={(e) => field("endDate", e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-                fontSize: "0.9rem",
-                boxSizing: "border-box",
-              }}
+              className="field-input"
             />
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button
-            type="submit"
-            disabled={saving || !currentSchool}
-            style={{
-              padding: "0.75rem 2rem",
-              background: saving || !currentSchool ? "#ccc" : "#4285f4",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: saving || !currentSchool ? "not-allowed" : "pointer",
-              fontSize: "1rem",
-              fontWeight: 500,
-            }}
-          >
+        <div className="form-actions">
+          <button type="submit" disabled={saving || !currentSchool} className="submit-button">
             {saving ? "Creating..." : "Create Course"}
           </button>
           <button
             type="button"
             onClick={() => router.push("/admin/courses")}
-            style={{
-              padding: "0.75rem 1.5rem",
-              background: "#f5f5f5",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "1rem",
-            }}
+            className="cancel-button"
           >
             Cancel
           </button>

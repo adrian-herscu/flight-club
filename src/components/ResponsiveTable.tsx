@@ -31,16 +31,8 @@ export function ResponsiveTable<T>({
 }: ResponsiveTableProps<T>) {
   if (data.length === 0) {
     return (
-      <div
-        style={{
-          padding: "2rem",
-          textAlign: "center",
-          color: "#666",
-          background: "#f9f9f9",
-          borderRadius: "4px",
-        }}
-      >
-        {emptyMessage}
+      <div className="enrollment-empty">
+        <p className="enrollment-empty-text">{emptyMessage}</p>
       </div>
     );
   }
@@ -49,25 +41,11 @@ export function ResponsiveTable<T>({
     <>
       {/* Desktop table view */}
       <div className="table-desktop">
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            background: "white",
-          }}
-        >
+        <table className="table-basic">
           <thead>
-            <tr style={{ background: "#f5f5f5", borderBottom: "2px solid #ddd" }}>
+            <tr className="table-header-row">
               {columns.map((col) => (
-                <th
-                  key={col.key}
-                  style={{
-                    padding: "1rem",
-                    textAlign: "left",
-                    fontWeight: 600,
-                    color: "#333",
-                  }}
-                >
+                <th key={col.key} className="table-header">
                   {col.header}
                 </th>
               ))}
@@ -75,15 +53,9 @@ export function ResponsiveTable<T>({
           </thead>
           <tbody>
             {data.map((item, index) => (
-              <tr key={keyExtractor(item, index)} style={{ borderBottom: "1px solid #eee" }}>
+              <tr key={keyExtractor(item, index)} className="table-row">
                 {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    style={{
-                      padding: "1rem",
-                      color: "#333",
-                    }}
-                  >
+                  <td key={col.key} className="table-cell">
                     {col.render(item)}
                   </td>
                 ))}
@@ -96,62 +68,16 @@ export function ResponsiveTable<T>({
       {/* Mobile card view */}
       <div className="table-mobile">
         {data.map((item, index) => (
-          <div
-            key={keyExtractor(item, index)}
-            style={{
-              background: "white",
-              borderRadius: "8px",
-              padding: "1rem",
-              marginBottom: "1rem",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            }}
-          >
+          <div key={keyExtractor(item, index)} className="table-mobile-card">
             {columns.map((col) => (
-              <div
-                key={col.key}
-                style={{
-                  marginBottom: "0.75rem",
-                  paddingBottom: "0.75rem",
-                  borderBottom: "1px solid #eee",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "#666",
-                    marginBottom: "0.25rem",
-                    fontWeight: 500,
-                  }}
-                >
-                  {col.mobileLabel || col.header}
-                </div>
-                <div style={{ color: "#333" }}>{col.render(item)}</div>
+              <div key={col.key} className="table-mobile-field">
+                <span className="table-mobile-label">{col.mobileLabel || col.header}</span>
+                <div>{col.render(item)}</div>
               </div>
             ))}
           </div>
         ))}
       </div>
-
-      {/* Responsive styles */}
-      <style jsx>{`
-        .table-desktop {
-          display: block;
-        }
-
-        .table-mobile {
-          display: none;
-        }
-
-        @media (max-width: 768px) {
-          .table-desktop {
-            display: none;
-          }
-
-          .table-mobile {
-            display: block;
-          }
-        }
-      `}</style>
     </>
   );
 }

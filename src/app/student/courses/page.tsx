@@ -106,73 +106,37 @@ export default function StudentCoursesPage() {
     <div
       key={course.id}
       onClick={() => router.push(`/student/courses/${course.id}`)}
-      style={{
-        padding: "1.5rem",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        background: "white",
-        cursor: "pointer",
-        transition: "box-shadow 0.2s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "none";
-      }}
+      className="card card-clickable"
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "1rem",
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <h3 style={{ margin: "0 0 0.5rem 0" }}>{course.title}</h3>
+      <div className="card-header">
+        <div>
+          <h3 className="card-title">{course.title}</h3>
           {course.syllabus_title && (
-            <p style={{ margin: 0, fontSize: "0.875rem", color: "#666" }}>
+            <p className="muted-text" style={{ fontSize: "0.9rem" }}>
               Based on: {course.syllabus_title}
             </p>
           )}
         </div>
-        <span
-          style={{
-            padding: "0.25rem 0.75rem",
-            borderRadius: "12px",
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            color: "white",
-            background: getStatusColor(course.status),
-          }}
-        >
+        <span className="badge" style={{ background: getStatusColor(course.status) }}>
           {course.status}
         </span>
       </div>
 
       {course.description && (
-        <p style={{ color: "#666", fontSize: "0.875rem", marginBottom: "1rem" }}>
-          {course.description}
-        </p>
+        <p style={{ marginBottom: "1rem", color: "#666" }}>{course.description}</p>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          gap: "2rem",
-          fontSize: "0.875rem",
-          color: "#666",
-          marginBottom: showEnrollButton ? "1rem" : 0,
-        }}
-      >
+      <div className={`meta-row ${showEnrollButton ? "" : ""}`}>
         <div>
           <strong>Enrollment:</strong> {course.enrolled_count ?? 0}
           {course.max_students && ` / ${course.max_students}`}
         </div>
         {course.spots_available !== undefined && (
-          <div style={{ color: course.spots_available > 0 ? "#34a853" : "#ea4335" }}>
+          <div
+            style={{
+              color: course.spots_available > 0 ? "#34a853" : "#ea4335",
+            }}
+          >
             <strong>Available Spots:</strong>{" "}
             {course.spots_available > 0 ? course.spots_available : "Waitlist Only"}
           </div>
@@ -185,17 +149,8 @@ export default function StudentCoursesPage() {
             e.stopPropagation();
             handleRequestEnrollment(course.id);
           }}
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            background: "#4285f4",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "1rem",
-            fontWeight: 500,
-          }}
+          className="btn btn-primary"
+          style={{ marginTop: "1rem", width: "100%" }}
         >
           Request Enrollment
         </button>
@@ -203,46 +158,24 @@ export default function StudentCoursesPage() {
     </div>
   );
 
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error) return <div className="error-text">Error: {error}</div>;
 
   return (
-    <div>
-      <h1 style={{ marginBottom: "2rem" }}>My Courses</h1>
+    <div style={{ padding: "2rem" }}>
+      <h1 className="page-title">My Courses</h1>
 
       {/* Tabs */}
-      <div style={{ marginBottom: "2rem", borderBottom: "2px solid #f0f0f0" }}>
-        <div style={{ display: "flex", gap: "2rem" }}>
+      <div className="tabs-container">
+        <div className="tabs-row">
           <button
             onClick={() => setActiveTab("enrolled")}
-            style={{
-              padding: "0.75rem 1rem",
-              background: "none",
-              border: "none",
-              borderBottom:
-                activeTab === "enrolled" ? "2px solid #4285f4" : "2px solid transparent",
-              color: activeTab === "enrolled" ? "#4285f4" : "#666",
-              fontWeight: activeTab === "enrolled" ? 600 : 400,
-              fontSize: "1rem",
-              cursor: "pointer",
-              marginBottom: "-2px",
-            }}
+            className={`tab-button ${activeTab === "enrolled" ? "tab-button-active" : ""}`}
           >
             My Enrolled Courses ({courses.length})
           </button>
           <button
             onClick={() => setActiveTab("available")}
-            style={{
-              padding: "0.75rem 1rem",
-              background: "none",
-              border: "none",
-              borderBottom:
-                activeTab === "available" ? "2px solid #4285f4" : "2px solid transparent",
-              color: activeTab === "available" ? "#4285f4" : "#666",
-              fontWeight: activeTab === "available" ? 600 : 400,
-              fontSize: "1rem",
-              cursor: "pointer",
-              marginBottom: "-2px",
-            }}
+            className={`tab-button ${activeTab === "available" ? "tab-button-active" : ""}`}
           >
             Available Courses ({availableCourses.length})
           </button>
@@ -253,51 +186,28 @@ export default function StudentCoursesPage() {
         <div>Loading courses...</div>
       ) : activeTab === "enrolled" ? (
         courses.length === 0 ? (
-          <div
-            style={{
-              padding: "3rem",
-              textAlign: "center",
-              background: "#f5f5f5",
-              borderRadius: "8px",
-            }}
-          >
-            <p style={{ fontSize: "1.125rem", marginBottom: "1rem" }}>No enrolled courses yet</p>
-            <p style={{ color: "#666", marginBottom: "2rem" }}>
+          <div className="empty-state">
+            <p className="empty-state-title">No enrolled courses yet</p>
+            <p className="empty-state-subtitle">
               Browse available courses and request enrollment to get started.
             </p>
-            <button
-              onClick={() => setActiveTab("available")}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: "#4285f4",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
+            <button onClick={() => setActiveTab("available")} className="btn btn-primary">
               View Available Courses
             </button>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: "1.5rem" }}>
+          <div className="card-grid">
             {courses.map((course) => renderCourseCard(course, false))}
           </div>
         )
       ) : availableCourses.length === 0 ? (
-        <div
-          style={{
-            padding: "3rem",
-            textAlign: "center",
-            background: "#f5f5f5",
-            borderRadius: "8px",
-          }}
-        >
-          <p style={{ color: "#666" }}>No available courses at this time. Check back later!</p>
+        <div className="empty-state">
+          <p className="empty-state-subtitle">
+            No available courses at this time. Check back later!
+          </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: "1.5rem" }}>
+        <div className="card-grid">
           {availableCourses.map((course) => renderCourseCard(course, true))}
         </div>
       )}

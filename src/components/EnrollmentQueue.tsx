@@ -85,7 +85,7 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
   };
 
   if (loading) return <div>Loading enrollment requests...</div>;
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error) return <div className="error-text">Error: {error}</div>;
 
   const pendingCount = enrollments.filter((e) => e.status === "pending_approval").length;
   const enrolledCount = enrollments.filter((e) => e.status === "enrolled").length;
@@ -93,16 +93,9 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
 
   return (
     <div>
-      <div
-        style={{
-          marginBottom: "1.5rem",
-          padding: "1rem",
-          background: "#f9f9f9",
-          borderRadius: "8px",
-        }}
-      >
-        <h3 style={{ margin: "0 0 0.5rem 0" }}>Enrollment Status</h3>
-        <div style={{ display: "flex", gap: "2rem", fontSize: "0.875rem" }}>
+      <div className="enrollment-status">
+        <h3 className="enrollment-status-title">Enrollment Status</h3>
+        <div className="enrollment-status-row">
           <div>
             <strong>Pending Approval:</strong> {pendingCount}
           </div>
@@ -111,7 +104,13 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
             {maxStudents && ` / ${maxStudents}`}
           </div>
           {spotsRemaining !== null && (
-            <div style={{ color: spotsRemaining > 0 ? "#34a853" : "#ea4335" }}>
+            <div
+              className={
+                spotsRemaining > 0
+                  ? "enrollment-status-spots-positive"
+                  : "enrollment-status-spots-negative"
+              }
+            >
               <strong>Spots Remaining:</strong> {spotsRemaining}
             </div>
           )}
@@ -119,93 +118,38 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
       </div>
 
       {pendingCount === 0 ? (
-        <div
-          style={{
-            padding: "2rem",
-            textAlign: "center",
-            background: "#f5f5f5",
-            borderRadius: "8px",
-          }}
-        >
-          <p style={{ color: "#666" }}>No pending enrollment requests</p>
+        <div className="enrollment-empty">
+          <p className="enrollment-empty-text">No pending enrollment requests</p>
         </div>
       ) : (
         <>
-          <h3 style={{ marginBottom: "1rem" }}>Pending Requests ({pendingCount})</h3>
-          <div style={{ display: "grid", gap: "1rem" }}>
+          <h3 className="enrollment-request-header">Pending Requests ({pendingCount})</h3>
+          <div className="enrollment-queue">
             {enrollments
               .filter((e) => e.status === "pending_approval")
               .map((enrollment) => (
-                <div
-                  key={enrollment.id}
-                  style={{
-                    padding: "1.25rem",
-                    border: "1px solid #ddd",
-                    borderRadius: "8px",
-                    background: "white",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
-                        {enrollment.student_name}
-                      </div>
-                      <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.5rem" }}>
-                        {enrollment.student_email}
-                      </div>
-                      <div style={{ fontSize: "0.875rem", color: "#666" }}>
+                <div key={enrollment.id} className="enrollment-item">
+                  <div className="enrollment-item-header">
+                    <div className="flex-1">
+                      <div className="enrollment-item-name">{enrollment.student_name}</div>
+                      <div className="enrollment-item-email">{enrollment.student_email}</div>
+                      <div className="enrollment-item-date">
                         Requested: {new Date(enrollment.requested_at).toLocaleString()}
                       </div>
                     </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "0.75rem",
-                        minWidth: "fit-content",
-                        paddingLeft: "1rem",
-                      }}
-                      className="button-group"
-                    >
+                    <div className="enrollment-actions">
                       <button
                         onClick={() => handleApprove(enrollment.id)}
                         disabled={actionLoading === enrollment.id}
-                        style={{
-                          padding: "0.75rem 1.5rem", // Increased for touch
-                          minHeight: "48px", // Touch-friendly height
-                          background: actionLoading === enrollment.id ? "#ccc" : "#34a853",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: actionLoading === enrollment.id ? "not-allowed" : "pointer",
-                          fontSize: "1rem", // Increased from 0.875rem
-                          fontWeight: 500,
-                          minWidth: "110px", // Increased for touch
-                        }}
+                        className="enrollment-approve-btn"
                       >
                         {actionLoading === enrollment.id ? "Processing..." : "Approve"}
                       </button>
                       <button
                         onClick={() => handleReject(enrollment.id)}
                         disabled={actionLoading === enrollment.id}
-                        style={{
-                          padding: "0.75rem 1.5rem", // Increased for touch
-                          minHeight: "48px", // Touch-friendly height
-                          background: actionLoading === enrollment.id ? "#ccc" : "#ea4335",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: actionLoading === enrollment.id ? "not-allowed" : "pointer",
-                          fontSize: "1rem", // Increased from 0.875rem
-                          fontWeight: 500,
-                          minWidth: "110px", // Increased for touch
-                        }}
+                        className="enrollment-reject-btn"
                       >
                         {actionLoading === enrollment.id ? "Processing..." : "Reject"}
                       </button>
@@ -216,22 +160,6 @@ export default function EnrollmentQueue({ courseId, maxStudents, onUpdate }: Enr
           </div>
         </>
       )}
-
-      {/* Responsive styles for mobile */}
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .button-group {
-            flex-direction: column !important;
-            width: 100% !important;
-            padding-left: 0 !important;
-            margin-top: 1rem !important;
-          }
-
-          .button-group button {
-            width: 100% !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

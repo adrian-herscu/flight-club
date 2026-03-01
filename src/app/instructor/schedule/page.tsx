@@ -75,15 +75,15 @@ export default function InstructorSchedulePage() {
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
   });
 
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error) return <div className="error-text">Error: {error}</div>;
 
   return (
     <div>
-      <h1 style={{ marginBottom: "2rem" }}>My Teaching Schedule</h1>
+      <h1 className="page-title">My Teaching Schedule</h1>
 
       {/* Filter Tabs */}
-      <div style={{ marginBottom: "2rem", borderBottom: "2px solid #f0f0f0" }}>
-        <div style={{ display: "flex", gap: "2rem" }}>
+      <div className="tabs-container">
+        <div className="tabs-row">
           {[
             { key: "upcoming", label: "Upcoming" },
             { key: "in_progress", label: "In Progress" },
@@ -93,17 +93,7 @@ export default function InstructorSchedulePage() {
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key as typeof filter)}
-              style={{
-                padding: "0.75rem 1rem",
-                background: "none",
-                border: "none",
-                borderBottom: filter === tab.key ? "2px solid #4285f4" : "2px solid transparent",
-                color: filter === tab.key ? "#4285f4" : "#666",
-                fontWeight: filter === tab.key ? 600 : 400,
-                fontSize: "1rem",
-                cursor: "pointer",
-                marginBottom: "-2px",
-              }}
+              className={`tab-button ${filter === tab.key ? "tab-button-active" : ""}`}
             >
               {tab.label}
             </button>
@@ -114,60 +104,33 @@ export default function InstructorSchedulePage() {
       {loading ? (
         <div>Loading schedule...</div>
       ) : sortedLessons.length === 0 ? (
-        <div
-          style={{
-            padding: "3rem",
-            textAlign: "center",
-            background: "#f5f5f5",
-            borderRadius: "8px",
-          }}
-        >
-          <p style={{ fontSize: "1.125rem", marginBottom: "1rem" }}>No lessons found</p>
-          <p style={{ color: "#666" }}>
+        <div className="empty-state">
+          <p className="empty-state-title">No lessons found</p>
+          <p className="empty-state-subtitle">
             {filter !== "all" ? `No ${filter} lessons.` : "No lessons assigned to you yet."}
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: "1.5rem" }}>
+        <div className="card-grid">
           {sortedLessons.map((lesson) => (
             <div
               key={lesson.id}
               onClick={() => router.push(`/instructor/lessons/${lesson.id}`)}
-              style={{
-                padding: "1.5rem",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                background: "white",
-                cursor: "pointer",
-                transition: "box-shadow 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              className="card card-clickable"
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "1rem",
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: "0 0 0.25rem 0" }}>{lesson.course_title}</h3>
-                  <p style={{ margin: "0 0 0.5rem 0", fontSize: "1.125rem", fontWeight: 500 }}>
+              <div className="card-header">
+                <div className="card-body">
+                  <h3 className="card-title">{lesson.course_title}</h3>
+                  <p className="lesson-title">
                     Lesson {lesson.sequence_order}: {lesson.lesson_title}
                   </p>
-                  <div style={{ fontSize: "0.875rem", color: "#666" }}>
+                  <div className="lesson-meta">
                     {lesson.start_time ? (
                       <div>
                         <strong>Time:</strong> {new Date(lesson.start_time).toLocaleString()}
                       </div>
                     ) : (
-                      <div style={{ color: "#ea4335" }}>⚠️ Not scheduled yet</div>
+                      <div className="warning-text">⚠️ Not scheduled yet</div>
                     )}
                     {lesson.location && (
                       <div>
@@ -180,39 +143,24 @@ export default function InstructorSchedulePage() {
                   </div>
                 </div>
                 <span
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderRadius: "12px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    color: "white",
-                    background: getStatusColor(lesson.status),
-                    whiteSpace: "nowrap",
-                  }}
+                  className="badge badge-large"
+                  style={{ background: getStatusColor(lesson.status) }}
                 >
                   {lesson.status}
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "2rem",
-                  paddingTop: "1rem",
-                  borderTop: "1px solid #f0f0f0",
-                  fontSize: "0.875rem",
-                }}
-              >
+              <div className="card-footer">
                 <div>
                   <strong>Enrolled Students:</strong> {lesson.enrolled_count}
                 </div>
                 {lesson.status !== "scheduled" && (
                   <div
-                    style={{
-                      color:
-                        lesson.evaluated_count === lesson.enrolled_count ? "#34a853" : "#ea4335",
-                    }}
+                    className={
+                      lesson.evaluated_count === lesson.enrolled_count
+                        ? "evaluation-complete"
+                        : "evaluation-incomplete"
+                    }
                   >
                     <strong>Evaluations:</strong> {lesson.evaluated_count} / {lesson.enrolled_count}
                   </div>

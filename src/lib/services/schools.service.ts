@@ -110,7 +110,7 @@ export async function removeSchoolMember(schoolId: number, userId: number) {
     where: {
       userId,
       schoolId,
-      roleType: RoleType.ADMIN,
+      roleType: "ADMIN",
     },
   });
 
@@ -118,7 +118,7 @@ export async function removeSchoolMember(schoolId: number, userId: number) {
     const adminCount = await prisma.userRole.count({
       where: {
         schoolId,
-        roleType: RoleType.ADMIN,
+        roleType: "ADMIN",
       },
     });
 

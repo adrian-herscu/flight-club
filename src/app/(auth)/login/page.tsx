@@ -80,78 +80,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        padding: "2rem",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "400px",
-          width: "100%",
-          padding: "2rem",
-          border: "1px solid #ddd",
-          borderRadius: "8px",
-          background: "white",
-        }}
-      >
-        <h1 style={{ marginBottom: "1.5rem", textAlign: "center" }}>School Management System</h1>
-        <p style={{ marginBottom: "2rem", textAlign: "center", color: "#666" }}>
-          Sign in with your Google account to continue
-        </p>
+    <div className="p-2xl">
+      <div className="card max-w-md">
+        <h1 className="page-title">School Management System</h1>
+        <p className="muted-text">Sign in with your Google account to continue</p>
 
-        {error && (
-          <div
-            style={{
-              padding: "1rem",
-              marginBottom: "1rem",
-              background: "#fee",
-              border: "1px solid #c00",
-              borderRadius: "4px",
-              color: "#c00",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        {error && <div className="error-box">{error}</div>}
 
         <button
           onClick={handleGoogleLogin}
           disabled={loading || !hasSupabaseConfig}
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            background: "#4285f4",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "1rem",
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.6 : 1,
-          }}
+          className="btn btn-primary mb-md w-full"
         >
           {loading ? "Signing in..." : "Sign in with Google"}
         </button>
 
-        <button
-          onClick={handleDevLogin}
-          style={{
-            width: "100%",
-            marginTop: "0.5rem",
-            padding: "0.75rem",
-            background: "#999",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "0.875rem",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={handleDevLogin} className="btn btn-secondary w-full">
           Dev Login (bypass auth)
         </button>
       </div>

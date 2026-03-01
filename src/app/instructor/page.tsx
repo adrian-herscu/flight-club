@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiClient } from "@/services/apiClient";
+import { useApiData } from "@/lib/hooks/useApiData";
 
 interface LessonItem {
   id: number;
@@ -17,104 +16,54 @@ interface LessonItem {
 
 export default function InstructorPage() {
   const router = useRouter();
-  const [upcoming, setUpcoming] = useState<LessonItem[]>([]);
-  const [inProgress, setInProgress] = useState<LessonItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useApiData<{ items: LessonItem[] }>("/api/v1/instructors/me/schedule");
 
-  useEffect(() => {
-    apiClient
-      .get<{ items: LessonItem[] }>("/api/v1/instructors/me/schedule")
-      .then((data) => {
-        const items = Array.isArray(data) ? data : ((data as any).items ?? []);
-        setUpcoming(items.filter((l: LessonItem) => l.status === "scheduled").slice(0, 5));
-        setInProgress(items.filter((l: LessonItem) => l.status === "in_progress"));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const items = Array.isArray(data) ? data : ((data as any)?.items ?? []);
+  const upcoming = items.filter((l: LessonItem) => l.status === "scheduled").slice(0, 5);
+  const inProgress = items.filter((l: LessonItem) => l.status === "in_progress");
 
   const statusColor = (s: string) =>
     s === "in_progress" ? "#34a853" : s === "scheduled" ? "#9C27B0" : "#666";
 
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "2rem",
-        }}
-      >
+    <div className="p-2xl">
+      <div className="header-row">
         <div>
-          <h1 style={{ margin: "0 0 0.25rem 0" }}>Instructor Dashboard</h1>
-          <p style={{ margin: 0, color: "#666" }}>Manage your lessons and student evaluations.</p>
+          <h1 className="page-title">Instructor Dashboard</h1>
+          <p className="muted-text">Manage your lessons and student evaluations.</p>
         </div>
-        <button
-          onClick={() => router.push("/instructor/schedule")}
-          style={{
-            padding: "0.75rem 1.5rem",
-            background: "#4285f4",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "1rem",
-          }}
-        >
+        <button onClick={() => router.push("/instructor/schedule")} className="btn btn-primary">
           View Full Schedule
         </button>
       </div>
 
       {/* In-progress lessons — most urgent */}
       {!loading && inProgress.length > 0 && (
-        <div style={{ marginBottom: "2rem" }}>
-          <h2 style={{ marginBottom: "1rem", color: "#34a853" }}>⚡ In Progress Now</h2>
-          <div style={{ display: "grid", gap: "1rem" }}>
-            {inProgress.map((lesson) => (
+        <div className="mb-2xl">
+          <h2 className="section-title" style={{ color: "#34a853" }}>
+            ⚡ In Progress Now
+          </h2>
+          <div className="card-grid">
+            {inProgress.map((lesson: LessonItem) => (
               <div
                 key={lesson.id}
                 onClick={() => router.push(`/instructor/lessons/${lesson.id}`)}
-                style={{
-                  padding: "1.25rem",
-                  border: "2px solid #34a853",
-                  borderRadius: "8px",
-                  background: "#f0fff4",
-                  cursor: "pointer",
-                }}
+                className="card card-clickable"
+                style={{ borderLeft: "4px solid #34a853" }}
               >
-                <div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                >
+                <div className="flex-center-between">
                   <div>
-                    <div style={{ fontSize: "0.8rem", color: "#666", marginBottom: "0.25rem" }}>
-                      {lesson.course_title}
-                    </div>
-                    <strong style={{ fontSize: "1.1rem" }}>{lesson.lesson_title}</strong>
+                    <div className="text-muted-small">{lesson.course_title}</div>
+                    <strong className="text-lg">{lesson.lesson_title}</strong>
                     {lesson.location && (
-                      <div style={{ fontSize: "0.875rem", color: "#444", marginTop: "0.25rem" }}>
-                        📍 {lesson.location}
-                      </div>
+                      <div className="text-muted mt-sm">📍 {lesson.location}</div>
                     )}
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "0.875rem", color: "#666" }}>
+                  <div className="text-right">
+                    <div className="text-small-muted">
                       {lesson.evaluated_count}/{lesson.enrolled_count} evaluated
                     </div>
-                    <button
-                      style={{
-                        marginTop: "0.5rem",
-                        padding: "0.4rem 0.875rem",
-                        background: "#34a853",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      Open →
-                    </button>
+                    <button className="btn btn-small">Open →</button>
                   </div>
                 </div>
               </div>
@@ -125,50 +74,24 @@ export default function InstructorPage() {
 
       {/* Upcoming lessons */}
       <div>
-        <h2 style={{ marginBottom: "1rem" }}>Upcoming Lessons</h2>
+        <h2 className="section-title">Upcoming Lessons</h2>
         {loading ? (
-          <div style={{ color: "#888" }}>Loading schedule...</div>
+          <div>Loading schedule...</div>
         ) : upcoming.length === 0 ? (
-          <div
-            style={{
-              padding: "2rem",
-              background: "#f5f5f5",
-              borderRadius: "8px",
-              textAlign: "center",
-              color: "#666",
-            }}
-          >
-            No upcoming scheduled lessons.
-          </div>
+          <div className="empty-state">No upcoming scheduled lessons.</div>
         ) : (
-          <div style={{ display: "grid", gap: "1rem" }}>
-            {upcoming.map((lesson) => (
+          <div className="card-grid">
+            {upcoming.map((lesson: LessonItem) => (
               <div
                 key={lesson.id}
                 onClick={() => router.push(`/instructor/lessons/${lesson.id}`)}
-                style={{
-                  padding: "1.25rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                  background: "white",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+                className="card card-clickable"
               >
-                <div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                >
+                <div className="flex-center-between">
                   <div>
-                    <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: "0.25rem" }}>
-                      {lesson.course_title}
-                    </div>
+                    <div className="text-muted text-small">{lesson.course_title}</div>
                     <strong>{lesson.lesson_title}</strong>
-                    <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.25rem" }}>
+                    <div className="meta-row mt-sm">
                       {lesson.start_time
                         ? new Date(lesson.start_time).toLocaleString(undefined, {
                             weekday: "short",
@@ -181,20 +104,17 @@ export default function InstructorPage() {
                       {lesson.location && <span> · 📍 {lesson.location}</span>}
                     </div>
                   </div>
-                  <div style={{ textAlign: "right", fontSize: "0.875rem", color: "#666" }}>
+                  <div className="text-right">
                     <span
+                      className="badge"
                       style={{
-                        padding: "0.2rem 0.6rem",
-                        borderRadius: "10px",
                         background: `${statusColor(lesson.status)}22`,
                         color: statusColor(lesson.status),
-                        fontWeight: 600,
-                        fontSize: "0.75rem",
                       }}
                     >
                       {lesson.status.replace("_", " ").toUpperCase()}
                     </span>
-                    <div style={{ marginTop: "0.35rem" }}>{lesson.enrolled_count} students</div>
+                    <div className="text-small-muted">{lesson.enrolled_count} students</div>
                   </div>
                 </div>
               </div>

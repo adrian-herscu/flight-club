@@ -132,103 +132,50 @@ export default function CourseDetailPage() {
   };
 
   if (loading) return <div>Loading course details...</div>;
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error) return <div className="error-text">Error: {error}</div>;
   if (!course) return <div>Course not found</div>;
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <button
-          onClick={() => router.push("/admin/courses")}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#f5f5f5",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-            cursor: "pointer",
-            marginBottom: "1rem",
-          }}
-        >
+      <div className="header-section">
+        <button onClick={() => router.push("/admin/courses")} className="back-button">
           ← Back to Courses
         </button>
 
         {isEditing ? (
-          <div
-            style={{
-              background: "#f9f9f9",
-              padding: "1.5rem",
-              borderRadius: "8px",
-              marginTop: "1rem",
-            }}
-          >
-            <h2 style={{ marginTop: 0 }}>Edit Course</h2>
-            <div style={{ display: "grid", gap: "1rem" }}>
-              <div>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-                  Title
-                </label>
+          <div className="edit-panel">
+            <h2 className="section-title">Edit Course</h2>
+            <div className="edit-grid">
+              <div className="field-group">
+                <label className="field-label">Title</label>
                 <input
                   type="text"
                   value={editData.title}
                   onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    fontSize: "1rem",
-                  }}
+                  className="field-input"
                 />
               </div>
-              <div>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-                  Description
-                </label>
+              <div className="field-group">
+                <label className="field-label">Description</label>
                 <textarea
                   value={editData.description}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                   rows={3}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    fontSize: "1rem",
-                    fontFamily: "inherit",
-                  }}
+                  className="field-textarea"
                 />
               </div>
-              <div>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-                  Max Students (optional)
-                </label>
+              <div className="field-group">
+                <label className="field-label">Max Students (optional)</label>
                 <input
                   type="number"
                   value={editData.max_students}
                   onChange={(e) => setEditData({ ...editData, max_students: e.target.value })}
                   min="1"
-                  style={{
-                    width: "200px",
-                    padding: "0.75rem",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    fontSize: "1rem",
-                  }}
+                  className="field-input"
                 />
               </div>
-              <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-                <button
-                  onClick={handleSaveEdit}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "#4285f4",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
+              <div className="form-actions">
+                <button onClick={handleSaveEdit} className="btn btn-primary">
                   Save Changes
                 </button>
                 <button
@@ -240,13 +187,7 @@ export default function CourseDetailPage() {
                       max_students: course.max_students?.toString() || "",
                     });
                   }}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "#f5f5f5",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
+                  className="btn btn-secondary"
                 >
                   Cancel
                 </button>
@@ -255,69 +196,31 @@ export default function CourseDetailPage() {
           </div>
         ) : (
           <>
-            <div
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
-            >
+            <div className="header-row">
               <div>
-                <h1 style={{ margin: "0 0 0.5rem 0" }}>{course.title}</h1>
-                {course.description && (
-                  <p style={{ color: "#666", margin: 0 }}>{course.description}</p>
-                )}
+                <h1 className="page-title">{course.title}</h1>
+                {course.description && <p className="muted-paragraph">{course.description}</p>}
               </div>
               <span
-                style={{
-                  padding: "0.5rem 1rem",
-                  borderRadius: "12px",
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  color: "white",
-                  background: getStatusColor(course.status),
-                }}
+                className="badge badge-large"
+                style={{ background: getStatusColor(course.status) }}
               >
                 {course.status}
               </span>
             </div>
 
-            <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem" }}>
-              <button
-                onClick={() => setIsEditing(true)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  background: "#4285f4",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
-              >
+            <div className="header-row" style={{ gap: "var(--spacing-md)" }}>
+              <button onClick={() => setIsEditing(true)} className="btn btn-primary">
                 Edit Course
               </button>
               <button
                 onClick={() => router.push(`/admin/courses/${courseId}/enrollments`)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  background: "#34a853",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
+                className="btn btn-success"
               >
                 Manage Enrollments
               </button>
               {course.status === "planned" && (
-                <button
-                  onClick={handleCancelCourse}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    background: "#ea4335",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
+                <button onClick={handleCancelCourse} className="btn btn-danger">
                   Cancel Course
                 </button>
               )}
@@ -326,73 +229,38 @@ export default function CourseDetailPage() {
         )}
       </div>
 
-      {/* Course Details */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "1rem",
-          marginBottom: "2rem",
-        }}
-      >
-        <div style={{ padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-          <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.25rem" }}>
-            Max Students
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-            {course.max_students || "Unlimited"}
-          </div>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-label">Max Students</div>
+          <div className="stat-value-large">{course.max_students || "Unlimited"}</div>
         </div>
-        <div style={{ padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-          <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.25rem" }}>
-            Total Lessons
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>{lessons.length}</div>
+        <div className="stat-card">
+          <div className="stat-label">Total Lessons</div>
+          <div className="stat-value-large">{lessons.length}</div>
         </div>
-        <div style={{ padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-          <div style={{ fontSize: "0.875rem", color: "#666", marginBottom: "0.25rem" }}>
-            Instructors
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-            {new Set(instructors.map((i) => i.user_id)).size}
-          </div>
+        <div className="stat-card">
+          <div className="stat-label">Instructors</div>
+          <div className="stat-value-large">{new Set(instructors.map((i) => i.user_id)).size}</div>
         </div>
       </div>
 
-      {/* Lessons */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h2>Course Lessons</h2>
+      <div className="lessons-section">
+        <h2 className="lessons-title">Course Lessons</h2>
         {lessons.length === 0 ? (
-          <p style={{ color: "#666" }}>No lessons found.</p>
+          <p className="empty-lessons">No lessons found.</p>
         ) : (
-          <div style={{ display: "grid", gap: "1rem" }}>
+          <div className="lessons-grid">
             {lessons.map((lesson) => (
-              <div
-                key={lesson.id}
-                style={{
-                  padding: "1rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                  background: "white",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                  }}
-                >
+              <div key={lesson.id} className="lesson-card">
+                <div className="lesson-header">
                   <div>
-                    <h4 style={{ margin: "0 0 0.5rem 0" }}>
+                    <h4 className="lesson-title">
                       {lesson.sequence_order}. {lesson.title}
                     </h4>
                     {lesson.description && (
-                      <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.875rem", color: "#666" }}>
-                        {lesson.description}
-                      </p>
+                      <p className="lesson-description">{lesson.description}</p>
                     )}
-                    <div style={{ fontSize: "0.875rem", color: "#666" }}>
+                    <div className="lesson-meta">
                       <div>Duration: {lesson.duration_hours} hours</div>
                       {lesson.start_time && (
                         <div>Scheduled: {new Date(lesson.start_time).toLocaleString()}</div>
@@ -400,17 +268,7 @@ export default function CourseDetailPage() {
                       {lesson.location && <div>Location: {lesson.location}</div>}
                     </div>
                   </div>
-                  <span
-                    style={{
-                      padding: "0.25rem 0.75rem",
-                      borderRadius: "12px",
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      background: getStatusColor(lesson.status),
-                      color: "white",
-                    }}
-                  >
+                  <span className="badge" style={{ background: getStatusColor(lesson.status) }}>
                     {lesson.status}
                   </span>
                 </div>
@@ -420,59 +278,39 @@ export default function CourseDetailPage() {
         )}
       </div>
 
-      {/* Instructors */}
-      <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1rem",
-          }}
-        >
-          <h2 style={{ margin: 0 }}>Assigned Instructors</h2>
+      <div className="instructors-section">
+        <div className="lessons-section">
+          <h2 className="lessons-title">Assigned Instructors</h2>
           <button
             onClick={() => router.push(`/admin/courses/${courseId}/instructors/assign`)}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#4285f4",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
+            className="btn btn-primary"
           >
             + Assign Instructor
           </button>
         </div>
 
         {instructors.length === 0 ? (
-          <p style={{ color: "#666" }}>No instructors assigned yet.</p>
+          <p className="empty-lessons">No instructors assigned yet.</p>
         ) : (
-          <div style={{ display: "grid", gap: "1rem" }}>
+          <div className="card-grid">
             {instructors.map((instructor) => (
-              <div
-                key={instructor.id}
-                style={{
-                  padding: "1rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                  background: "white",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <div key={instructor.id} className="card">
                 <div>
-                  <div style={{ fontWeight: 600 }}>{instructor.user_name}</div>
-                  <div style={{ fontSize: "0.875rem", color: "#666" }}>{instructor.user_email}</div>
-                  <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.25rem" }}>
+                  <div className="card-title">{instructor.user_name}</div>
+                  <div className="muted-text">{instructor.user_email}</div>
+                  <div
+                    className="muted-text"
+                    style={{ fontSize: "0.85rem", marginTop: "var(--spacing-xs)" }}
+                  >
                     {instructor.course_lesson_id
                       ? `Assigned to lesson #${lessons.find((l) => l.id === instructor.course_lesson_id)?.sequence_order || instructor.course_lesson_id}`
                       : "Assigned to all lessons"}
                   </div>
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#666" }}>
+                <div
+                  className="muted-text"
+                  style={{ fontSize: "0.85rem", marginTop: "var(--spacing-md)" }}
+                >
                   Assigned: {new Date(instructor.assigned_at).toLocaleDateString()}
                 </div>
               </div>

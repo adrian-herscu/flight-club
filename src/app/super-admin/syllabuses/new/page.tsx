@@ -31,45 +31,22 @@ export default function NewSyllabusPage() {
 
   return (
     <div>
-      <button
-        onClick={() => router.push("/super-admin/syllabuses")}
-        style={{
-          padding: "0.5rem 1rem",
-          background: "#f5f5f5",
-          border: "1px solid #ddd",
-          borderRadius: "4px",
-          cursor: "pointer",
-          marginBottom: "1.5rem",
-        }}
-      >
+      <button onClick={() => router.push("/super-admin/syllabuses")} className="back-button">
         ← Back to Syllabuses
       </button>
 
-      <h1 style={{ marginBottom: "0.5rem" }}>Create New Syllabus</h1>
-      <p style={{ color: "#666", marginBottom: "2rem" }}>
+      <h1 className="page-title">Create New Syllabus</h1>
+      <p className="muted-paragraph">
         A syllabus defines the lesson structure for a training programme. After creating it, add
         lessons, then publish it to make it available for schools to use.
       </p>
 
-      {error && (
-        <div
-          style={{
-            padding: "1rem",
-            background: "#fdecea",
-            border: "1px solid #f5c6cb",
-            borderRadius: "4px",
-            marginBottom: "1.5rem",
-            color: "#721c24",
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <div className="error-box">{error}</div>}
 
-      <form onSubmit={handleSubmit} style={{ maxWidth: "560px" }}>
-        <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Title <span style={{ color: "#d32f2f" }}>*</span>
+      <form onSubmit={handleSubmit}>
+        <div className="field-group">
+          <label className="field-label">
+            Title <span className="required">*</span>
           </label>
           <input
             type="text"
@@ -78,66 +55,29 @@ export default function NewSyllabusPage() {
             placeholder="e.g. P2 Paragliding Certification"
             required
             autoFocus
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              boxSizing: "border-box",
-            }}
+            className="field-input"
           />
         </div>
 
-        <div style={{ marginBottom: "2rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Description
-          </label>
+        <div className="field-group">
+          <label className="field-label">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Brief description of what this syllabus covers"
             rows={4}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              fontFamily: "inherit",
-              boxSizing: "border-box",
-            }}
+            className="field-textarea"
           />
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button
-            type="submit"
-            disabled={saving || !title.trim()}
-            style={{
-              padding: "0.75rem 2rem",
-              background: saving || !title.trim() ? "#ccc" : "#4285f4",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: saving || !title.trim() ? "not-allowed" : "pointer",
-              fontSize: "1rem",
-              fontWeight: 500,
-            }}
-          >
+        <div className="form-actions">
+          <button type="submit" disabled={saving || !title.trim()} className="submit-button">
             {saving ? "Creating..." : "Create Syllabus"}
           </button>
           <button
             type="button"
             onClick={() => router.push("/super-admin/syllabuses")}
-            style={{
-              padding: "0.75rem 1.5rem",
-              background: "#f5f5f5",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "1rem",
-            }}
+            className="cancel-button"
           >
             Cancel
           </button>

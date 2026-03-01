@@ -113,34 +113,29 @@ export default function EvaluationForm({
 
   return (
     <div
-      style={{
-        padding: "1.5rem",
-        border: `2px solid ${isFinalized ? getResultColor(result) : "#ddd"}`,
-        borderRadius: "8px",
-        background: isFinalized
+      className={`evaluation-form ${
+        isFinalized
           ? result === "pass"
-            ? "#e6f4ea"
+            ? "form-evaluation-finalized-pass"
             : result === "fail"
-              ? "#fce8e6"
-              : "white"
-          : "white",
+              ? "form-evaluation-finalized-fail"
+              : "form-evaluation-finalized"
+          : ""
+      }`}
+      style={{
+        borderColor: isFinalized ? getResultColor(result) : undefined,
       }}
     >
-      {/* Student Header */}
-      <div style={{ marginBottom: "1.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="mb-xl">
+        <div className="flex-center-between">
           <div>
-            <h3 style={{ margin: "0 0 0.25rem 0" }}>{student.name}</h3>
-            <div style={{ fontSize: "0.875rem", color: "#666" }}>{student.email}</div>
+            <h3 className="section-subtitle">{student.name}</h3>
+            <div className="muted-text">{student.email}</div>
           </div>
           {isFinalized && (
             <span
+              className="result-badge"
               style={{
-                padding: "0.5rem 1rem",
-                borderRadius: "12px",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                color: "white",
                 background: getResultColor(result),
               }}
             >
@@ -150,28 +145,18 @@ export default function EvaluationForm({
         </div>
       </div>
 
-      {/* Evaluation Form */}
-      <div style={{ display: "grid", gap: "1.25rem" }}>
+      <div className="grid-gap-lg">
         {/* Result Selection */}
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Result <span style={{ color: "#ea4335" }}>*</span>
+        <div className="evaluation-form-section">
+          <label className="evaluation-form-label">
+            Result <span className="required-indicator">*</span>
           </label>
           <select
             value={result}
             onChange={(e) => setResult(e.target.value)}
             disabled={isFinalized || saving}
             required
-            style={{
-              width: "100%",
-              padding: "1rem", // Increased from 0.75rem for touch
-              minHeight: "44px", // iOS touch target minimum
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              background: isFinalized ? "#f5f5f5" : "white",
-              cursor: isFinalized ? "not-allowed" : "pointer",
-            }}
+            className={`field-input ${isFinalized ? "form-select-disabled" : ""}`}
           >
             <option value="">-- Select result --</option>
             <option value="pass">PASS</option>
@@ -181,34 +166,21 @@ export default function EvaluationForm({
         </div>
 
         {/* Feedback Notes (visible to student) */}
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
-            Feedback Notes (Visible to Student)
-          </label>
+        <div className="evaluation-form-section">
+          <label className="evaluation-form-label">Feedback Notes (Visible to Student)</label>
           <textarea
             value={feedbackNotes}
             onChange={(e) => setFeedbackNotes(e.target.value)}
             disabled={isFinalized || saving}
             rows={4}
             placeholder="Provide constructive feedback for the student..."
-            style={{
-              width: "100%",
-              padding: "1rem", // Increased for touch
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              fontFamily: "inherit",
-              background: isFinalized ? "#f5f5f5" : "white",
-              cursor: isFinalized ? "not-allowed" : "text",
-              resize: "vertical",
-              minHeight: "120px", // Adequate touch area
-            }}
+            className={`evaluation-form-textarea ${isFinalized ? "textarea-disabled" : ""}`}
           />
         </div>
 
         {/* Admin Notes (never visible to student) */}
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
+        <div className="evaluation-form-section">
+          <label className="evaluation-form-label">
             Admin Notes (Internal Only - Never Shown to Student)
           </label>
           <textarea
@@ -217,58 +189,22 @@ export default function EvaluationForm({
             disabled={isFinalized || saving}
             rows={3}
             placeholder="Internal notes for administrative purposes..."
-            style={{
-              width: "100%", // Increased for touch
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              fontFamily: "inherit",
-              background: isFinalized ? "#f5f5f5" : "white",
-              cursor: isFinalized ? "not-allowed" : "text",
-              resize: "vertical",
-              minHeight: "100px", // Adequate touch area
-            }}
+            className={`evaluation-form-textarea ${isFinalized ? "textarea-disabled" : ""}`}
           />
         </div>
 
         {/* Message Display */}
-        {message && (
-          <div
-            style={{
-              padding: "0.75rem 1rem",
-              borderRadius: "4px",
-              background: message.type === "success" ? "#e6f4ea" : "#fce8e6",
-              color: message.type === "success" ? "#137333" : "#c5221f",
-              fontSize: "0.875rem",
-            }}
-          >
-            {message.text}
-          </div>
-        )}
+        {message && <div className={`evaluation-form-message ${message.type}`}>{message.text}</div>}
 
         {/* Save Button */}
         {!isFinalized && (
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              padding: "1rem 1.5rem", // Increased padding for touch
-              minHeight: "48px", // Touch-friendly button height
-              background: saving ? "#ccc" : "#4285f4",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: saving ? "not-allowed" : "pointer",
-              fontSize: "1rem",
-              fontWeight: 500,
-            }}
-          >
+          <button onClick={handleSave} disabled={saving} className="evaluation-form-save-btn">
             {saving ? "Saving..." : evaluation?.id ? "Update Evaluation" : "Save Evaluation"}
           </button>
         )}
 
         {isFinalized && (
-          <div style={{ fontSize: "0.875rem", color: "#666", fontStyle: "italic" }}>
+          <div className="subtitle-muted">
             ✓ This evaluation is finalized and cannot be modified. Student has been notified.
           </div>
         )}

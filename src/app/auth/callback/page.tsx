@@ -60,7 +60,7 @@ export default function AuthCallbackPage() {
 
   return (
     <div style={{ padding: "2rem" }}>
-      {error ? <div style={{ color: "red" }}>Error: {error}</div> : <div>Signing you in...</div>}
+      {error ? <div className="error-text">Error: {error}</div> : <div>Signing you in...</div>}
     </div>
   );
 }
