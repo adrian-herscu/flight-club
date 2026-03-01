@@ -48,8 +48,9 @@ export function NavShell({ children }: NavShellProps) {
 
     const fetchUserRoles = async () => {
       try {
-        const isDevMode = typeof window !== "undefined" && localStorage.getItem("dev-mode") === "true";
-        
+        const isDevMode =
+          typeof window !== "undefined" && localStorage.getItem("dev-mode") === "true";
+
         if (isDevMode) {
           // In dev mode, fetch from API with dev token
           const devUserEmail = localStorage.getItem("dev-user-email") || "dev@local.com";
@@ -95,7 +96,7 @@ export function NavShell({ children }: NavShellProps) {
 
   // Filter nav items based on user roles
   const visibleNavItems = NAV_ITEMS.filter((item) =>
-    item.roles.some((role) => userRoles.includes(role))
+    item.roles.some((role) => userRoles.includes(role)),
   );
 
   return (
@@ -121,17 +122,18 @@ export function NavShell({ children }: NavShellProps) {
             <SchoolSwitcher />
 
             <ul className="nav-list">
-              {!loading && visibleNavItems.map((item) => (
-                <li key={item.href} className="nav-list-item">
-                  <Link
-                    href={item.href}
-                    className="nav-link"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
+              {!loading &&
+                visibleNavItems.map((item) => (
+                  <li key={item.href} className="nav-list-item">
+                    <Link
+                      href={item.href}
+                      className="nav-link"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
               <li className="nav-list-item-separator">
                 <Link
                   href="/logout"

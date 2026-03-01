@@ -21,7 +21,8 @@ export function UserProfile() {
     const loadUser = async () => {
       try {
         // Check if in dev mode
-        const isDevMode = typeof window !== "undefined" && localStorage.getItem("dev-mode") === "true";
+        const isDevMode =
+          typeof window !== "undefined" && localStorage.getItem("dev-mode") === "true";
 
         if (isDevMode) {
           // In dev mode, load from localStorage AND fetch roles from API
@@ -84,7 +85,7 @@ export function UserProfile() {
         if (authUser) {
           // Extract user info from auth user metadata (Google profile data)
           const userMetadata = authUser.user_metadata || {};
-          
+
           // Fetch roles from API
           try {
             const response = await fetch("/api/v1/me");

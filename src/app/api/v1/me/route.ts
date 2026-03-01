@@ -35,9 +35,9 @@ export async function GET(request: Request) {
     // Map role to roles array
     const rolesMap: { [key: string]: string[] } = {
       "super-admin": ["super_admin"],
-      "admin": ["school_admin"],
-      "instructor": ["instructor"],
-      "student": ["student"],
+      admin: ["school_admin"],
+      instructor: ["instructor"],
+      student: ["student"],
     };
 
     return success({
