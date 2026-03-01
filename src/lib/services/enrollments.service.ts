@@ -31,22 +31,6 @@ export async function createEnrollment(data: {
     throw new APIError("NOT_FOUND", "Course not found");
   }
 
-  // Check if already enrolled
-  const existing = await prisma.studentEnrollment.findFirst({
-    where: {
-      courseId: data.courseId,
-      studentId: data.studentId,
-      status: { not: EnrollmentStatus.rejected },
-    },
-  });
-
-  if (existing) {
-    throw new APIError(
-      "CONFLICT",
-      "Student is already enrolled or pending approval for this course",
-    );
-  }
-
   const enrolledCount = course._count.enrollments;
   const status =
     enrolledCount >= course.maxStudents
@@ -67,6 +51,12 @@ export async function createEnrollment(data: {
       },
     });
   } catch (error: any) {
+    if (error.code === "P2002") {
+      throw new APIError(
+        "CONFLICT",
+        "Student is already enrolled or pending approval for this course",
+      );
+    }
     if (error.code === "P2003") {
       throw new APIError("NOT_FOUND", "Student not found");
     }

@@ -16,10 +16,6 @@ export async function createCourse(data: {
   endDate: Date;
   maxStudents: number;
 }) {
-  if (data.startDate >= data.endDate) {
-    throw new APIError("INVALID_DATE", "Course end date must be after start date");
-  }
-
   const syllabus = await prisma.syllabus.findUnique({
     where: { id: data.syllabusId },
     select: { status: true },
@@ -122,32 +118,25 @@ export async function updateCourse(
     maxStudents?: number;
   },
 ) {
-  if (data.startDate || data.endDate) {
-    const course = await prisma.course.findUnique({
+  try {
+    return await prisma.course.update({
       where: { id },
-      select: { startDate: true, endDate: true },
+      data,
+      include: {
+        lessons: {
+          orderBy: { sequenceOrder: "asc" },
+        },
+      },
     });
-
-    if (!course) {
+  } catch (error: any) {
+    if (error.code === "P2025") {
       throw new APIError("NOT_FOUND", "Course not found");
     }
-
-    const startDate = data.startDate || course.startDate;
-    const endDate = data.endDate || course.endDate;
-    if (startDate >= endDate) {
-      throw new APIError("INVALID_DATE", "Course end date must be after start date");
+    if (error.code === "P2004") {
+      throw new APIError("INVALID_DATE", "Invalid course dates or constraints");
     }
+    throw error;
   }
-
-  return prisma.course.update({
-    where: { id },
-    data,
-    include: {
-      lessons: {
-        orderBy: { sequenceOrder: "asc" },
-      },
-    },
-  });
 }
 
 export async function cancelCourse(id: number) {

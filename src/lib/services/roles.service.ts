@@ -84,72 +84,42 @@ export async function getSchoolAdmins(schoolId: number) {
 }
 
 export async function removeRole(id: number) {
-  const role = await prisma.userRole.findUnique({
-    where: { id },
-    include: {
-      school: {
-        select: {
-          _count: {
-            select: {
-              userRoles: {
-                where: { roleType: "ADMIN" },
-              },
-            },
-          },
-        },
+  try {
+    return await prisma.userRole.delete({
+      where: { id },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
       },
-    },
-  });
-
-  if (!role) {
-    throw new APIError("NOT_FOUND", "Role assignment not found");
+    });
+  } catch (error: any) {
+    if (error.code === "P2025") {
+      throw new APIError("NOT_FOUND", "Role assignment not found");
+    }
+    if (error.code === "P2004") {
+      throw new APIError("CONFLICT", "Cannot remove the last admin from a school");
+    }
+    throw error;
   }
-
-  if (role.roleType === "ADMIN" && role.school._count.userRoles <= 1) {
-    throw new APIError("CONFLICT", "Cannot remove the last admin from a school");
-  }
-
-  return prisma.userRole.delete({
-    where: { id },
-    include: {
-      user: { select: { id: true, email: true, name: true } },
-    },
-  });
 }
 
 export async function updateUserRole(id: number, newRoleType: "ADMIN" | "INSTRUCTOR" | "STUDENT") {
-  const role = await prisma.userRole.findUnique({
-    where: { id },
-    include: {
-      school: {
-        select: {
-          _count: {
-            select: {
-              userRoles: {
-                where: { roleType: "ADMIN" },
-              },
-            },
-          },
-        },
+  try {
+    return await prisma.userRole.update({
+      where: { id },
+      data: { roleType: newRoleType },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
       },
-    },
-  });
-
-  if (!role) {
-    throw new APIError("NOT_FOUND", "Role assignment not found");
+    });
+  } catch (error: any) {
+    if (error.code === "P2025") {
+      throw new APIError("NOT_FOUND", "Role assignment not found");
+    }
+    if (error.code === "P2004") {
+      throw new APIError("CONFLICT", "Cannot demote the last admin from a school");
+    }
+    throw error;
   }
-
-  if (role.roleType === "ADMIN" && newRoleType !== "ADMIN" && role.school._count.userRoles <= 1) {
-    throw new APIError("CONFLICT", "Cannot demote the last admin from a school");
-  }
-
-  return prisma.userRole.update({
-    where: { id },
-    data: { roleType: newRoleType },
-    include: {
-      user: { select: { id: true, email: true, name: true } },
-    },
-  });
 }
 
 export async function hasRole(

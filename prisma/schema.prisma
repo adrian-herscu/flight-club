@@ -118,6 +118,7 @@ model Lesson {
   // Relations
   syllabus Syllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
 
+  @@unique([syllabusId, order], map: "uq_lesson_syllabus_order")
   @@map("lessons")
 }
 
@@ -185,6 +186,7 @@ model CourseLesson {
   evaluations           StudentLessonEvaluation[]
 
   @@unique([courseId, sequenceOrder], map: "uq_course_sequence_order")
+  @@unique([id, courseId], map: "uq_course_lessons_id_course_id")
   @@index([courseId], map: "ix_course_lessons_course_id")
   @@index([status], map: "ix_course_lessons_status")
   @@index([location, startTime], map: "ix_course_lessons_location_start")

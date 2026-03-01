@@ -110,35 +110,26 @@ export async function getSchoolMembers(schoolId: number) {
 }
 
 export async function removeSchoolMember(schoolId: number, userId: number) {
-  const userRole = await prisma.userRole.findFirst({
-    where: { userId, schoolId },
-    include: {
-      school: {
-        select: {
-          _count: {
-            select: {
-              userRoles: {
-                where: { roleType: "ADMIN" },
-              },
-            },
-          },
-        },
+  try {
+    const deleted = await prisma.userRole.deleteMany({
+      where: {
+        userId,
+        schoolId,
       },
-    },
-  });
+    });
 
-  if (!userRole) {
-    throw new APIError("NOT_FOUND", "User role not found in this school");
+    if (deleted.count === 0) {
+      throw new APIError("NOT_FOUND", "User role not found in this school");
+    }
+
+    return deleted;
+  } catch (error: any) {
+    if (error instanceof APIError) {
+      throw error;
+    }
+    if (error.code === "P2004") {
+      throw new APIError("CONFLICT", "Cannot remove the last admin from a school");
+    }
+    throw error;
   }
-
-  if (userRole.roleType === "ADMIN" && userRole.school._count.userRoles <= 1) {
-    throw new APIError("CONFLICT", "Cannot remove the last admin from a school");
-  }
-
-  return prisma.userRole.deleteMany({
-    where: {
-      userId,
-      schoolId,
-    },
-  });
 }
