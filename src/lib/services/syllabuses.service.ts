@@ -1,5 +1,6 @@
 import { APIError } from "../errors";
 import { prisma } from "../prisma";
+import { requireNotNull } from "../require-not-null";
 
 /**
  * Syllabuses Service - Works with actual Prisma schema
@@ -32,11 +33,7 @@ export async function getSyllabusById(id: number) {
     },
   });
 
-  if (!syllabus) {
-    throw new APIError("NOT_FOUND", "Syllabus not found");
-  }
-
-  return syllabus;
+  return requireNotNull(syllabus, "Syllabus not found");
 }
 
 export async function getSchoolSyllabuses(schoolId: number) {
@@ -95,50 +92,41 @@ export async function updateSyllabus(
 }
 
 export async function publishSyllabus(id: number) {
-  try {
-    const updated = await prisma.syllabus.updateMany({
-      where: {
-        id,
-        status: { not: "FINAL" },
-      },
-      data: {
-        status: "FINAL",
-        finalizedAt: new Date(),
-      },
-    });
+  const updated = await prisma.syllabus.updateMany({
+    where: {
+      id,
+      status: { not: "FINAL" },
+    },
+    data: {
+      status: "FINAL",
+      finalizedAt: new Date(),
+    },
+  });
 
-    if (updated.count === 0) {
-      throw new APIError("CONFLICT", "Syllabus is already published or not found");
-    }
-
-    return prisma.syllabus.findUnique({
-      where: { id },
-      include: {
-        lessons: {
-          orderBy: { order: "asc" },
-        },
-      },
-    })!;
-  } catch (error: any) {
-    if (error.code === "P2004") {
-      throw new APIError("CONFLICT", "Cannot publish syllabus without lessons");
-    }
-    throw error;
+  if (updated.count === 0) {
+    throw new APIError("CONFLICT", "Syllabus is already published or not found");
   }
+
+  return prisma.syllabus.findUnique({
+    where: { id },
+    include: {
+      lessons: {
+        orderBy: { order: "asc" },
+      },
+    },
+  })!;
 }
 
 export async function deleteSyllabus(id: number) {
   return prisma.$transaction(async (tx) => {
-    const syllabus = await tx.syllabus.findUnique({
+    const syllabusRaw = await tx.syllabus.findUnique({
       where: { id },
       include: {
         _count: { select: { courses: true } },
       },
     });
 
-    if (!syllabus) {
-      throw new APIError("NOT_FOUND", "Syllabus not found");
-    }
+    const syllabus = requireNotNull(syllabusRaw, "Syllabus not found");
 
     if (syllabus._count.courses > 0) {
       throw new APIError("CONFLICT", "Cannot delete syllabus used in existing courses");
@@ -164,30 +152,14 @@ export async function addLesson(data: {
   description?: string;
   order: number;
 }) {
-  try {
-    return await prisma.lesson.create({
-      data: {
-        syllabusId: data.syllabusId,
-        title: data.title,
-        description: data.description,
-        order: data.order,
-      },
-    });
-  } catch (error: any) {
-    if (error.code === "P2002") {
-      throw new APIError(
-        "CONFLICT",
-        "Lesson with this order already exists. Use updateLessonOrder to reorder.",
-      );
-    }
-    if (error.code === "P2003") {
-      throw new APIError("NOT_FOUND", "Syllabus not found");
-    }
-    if (error.code === "P2004") {
-      throw new APIError("CONFLICT", "Cannot add lessons to published syllabuses");
-    }
-    throw error;
-  }
+  return await prisma.lesson.create({
+    data: {
+      syllabusId: data.syllabusId,
+      title: data.title,
+      description: data.description,
+      order: data.order,
+    },
+  });
 }
 
 export async function getLessonById(id: number) {
@@ -195,11 +167,7 @@ export async function getLessonById(id: number) {
     where: { id },
   });
 
-  if (!lesson) {
-    throw new APIError("NOT_FOUND", "Lesson not found");
-  }
-
-  return lesson;
+  return requireNotNull(lesson, "Lesson not found");
 }
 
 export async function updateLesson(
@@ -209,122 +177,91 @@ export async function updateLesson(
     description?: string;
   },
 ) {
-  try {
-    return await prisma.lesson.update({
-      where: { id },
-      data: {
-        ...(data.title && { title: data.title }),
-        ...(data.description && { description: data.description }),
-      },
-    });
-  } catch (error: any) {
-    if (error.code === "P2025") {
-      throw new APIError("NOT_FOUND", "Lesson not found");
-    }
-    if (error.code === "P2004") {
-      throw new APIError("CONFLICT", "Cannot edit lessons in published syllabuses");
-    }
-    throw error;
-  }
+  return await prisma.lesson.update({
+    where: { id },
+    data: {
+      ...(data.title && { title: data.title }),
+      ...(data.description && { description: data.description }),
+    },
+  });
 }
 
 export async function updateLessonOrder(id: number, newOrder: number) {
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const lesson = await tx.lesson.findUnique({
-        where: { id },
-        select: { id: true, syllabusId: true, order: true },
-      });
-
-      if (!lesson) {
-        throw new APIError("NOT_FOUND", "Lesson not found");
-      }
-
-      const currentOrder = lesson.order;
-
-      if (currentOrder === newOrder) {
-        return tx.lesson.findUniqueOrThrow({ where: { id } });
-      }
-
-      // Shift lessons between old and new position
-      if (newOrder < currentOrder) {
-        // Moving up: shift others down
-        await tx.lesson.updateMany({
-          where: {
-            syllabusId: lesson.syllabusId,
-            order: { gte: newOrder, lt: currentOrder },
-          },
-          data: { order: { increment: 1 } },
-        });
-      } else {
-        // Moving down: shift others up
-        await tx.lesson.updateMany({
-          where: {
-            syllabusId: lesson.syllabusId,
-            order: { gt: currentOrder, lte: newOrder },
-          },
-          data: { order: { decrement: 1 } },
-        });
-      }
-
-      // Update the moved lesson
-      return tx.lesson.update({
-        where: { id },
-        data: { order: newOrder },
-      });
+  return await prisma.$transaction(async (tx) => {
+    const lessonRaw = await tx.lesson.findUnique({
+      where: { id },
+      select: { id: true, syllabusId: true, order: true },
     });
-  } catch (error: any) {
-    if (error.code === "P2004") {
-      throw new APIError("CONFLICT", "Cannot reorder lessons in published syllabuses");
+
+    const lesson = requireNotNull(lessonRaw, "Lesson not found");
+
+    const currentOrder = lesson.order;
+
+    if (currentOrder === newOrder) {
+      return tx.lesson.findUniqueOrThrow({ where: { id } });
     }
-    if (error.code === "P2002") {
-      throw new APIError("CONFLICT", "Lesson order conflict");
-    }
-    throw error;
-  }
-}
 
-export async function deleteLesson(id: number) {
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const lesson = await tx.lesson.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          syllabusId: true,
-          title: true,
-          description: true,
-          order: true,
-          createdAt: true,
-        },
-      });
-
-      if (!lesson) {
-        throw new APIError("NOT_FOUND", "Lesson not found");
-      }
-
-      // Delete lesson
-      await tx.lesson.delete({
-        where: { id },
-      });
-
-      // Shift remaining lessons up
+    // Shift lessons between old and new position
+    if (newOrder < currentOrder) {
+      // Moving up: shift others down
       await tx.lesson.updateMany({
         where: {
           syllabusId: lesson.syllabusId,
-          order: { gt: lesson.order },
+          order: { gte: newOrder, lt: currentOrder },
+        },
+        data: { order: { increment: 1 } },
+      });
+    } else {
+      // Moving down: shift others up
+      await tx.lesson.updateMany({
+        where: {
+          syllabusId: lesson.syllabusId,
+          order: { gt: currentOrder, lte: newOrder },
         },
         data: { order: { decrement: 1 } },
       });
-
-      return lesson;
-    });
-  } catch (error: any) {
-    if (error.code === "P2004") {
-      throw new APIError("CONFLICT", "Cannot delete lessons from published syllabuses");
     }
-    throw error;
-  }
+
+    // Update the moved lesson
+    return tx.lesson.update({
+      where: { id },
+      data: { order: newOrder },
+    });
+  });
+}
+
+export async function deleteLesson(id: number) {
+  return await prisma.$transaction(async (tx) => {
+    const lessonRaw = await tx.lesson.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        syllabusId: true,
+        title: true,
+        description: true,
+        order: true,
+        createdAt: true,
+      },
+    });
+
+    const lesson = requireNotNull(lessonRaw, "Lesson not found");
+
+    // Delete lesson
+    await tx.lesson.delete({
+      where: { id },
+    });
+
+    // Shift remaining lessons up
+    await tx.lesson.updateMany({
+      where: {
+        syllabusId: lesson.syllabusId,
+        order: { gt: lesson.order },
+      },
+      data: { order: { decrement: 1 } },
+    });
+
+    return lesson;
+  });
 }
 
 export async function getSyllabusLessons(syllabusId: number) {

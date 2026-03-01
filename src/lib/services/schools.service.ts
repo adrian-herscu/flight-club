@@ -1,5 +1,6 @@
 import { APIError } from "../errors";
 import { prisma } from "../prisma";
+import { requireNotNull } from "../require-not-null";
 
 /**
  * School Service - Works with actual Prisma schema
@@ -35,11 +36,7 @@ export async function getSchoolById(id: number) {
     },
   });
 
-  if (!school) {
-    throw new APIError("NOT_FOUND", "School not found");
-  }
-
-  return school;
+  return requireNotNull(school, "School not found");
 }
 
 export async function createSchool(data: {
@@ -73,16 +70,14 @@ export async function updateSchool(id: number, data: any) {
 }
 
 export async function deleteSchool(id: number) {
-  const school = await prisma.school.findUnique({
+  const schoolRaw = await prisma.school.findUnique({
     where: { id },
     include: {
       _count: { select: { courses: true } },
     },
   });
 
-  if (!school) {
-    throw new APIError("NOT_FOUND", "School not found");
-  }
+  const school = requireNotNull(schoolRaw, "School not found");
 
   if (school._count.courses > 0) {
     throw new APIError("CONFLICT", "Cannot delete school with existing courses");
@@ -110,26 +105,16 @@ export async function getSchoolMembers(schoolId: number) {
 }
 
 export async function removeSchoolMember(schoolId: number, userId: number) {
-  try {
-    const deleted = await prisma.userRole.deleteMany({
-      where: {
-        userId,
-        schoolId,
-      },
-    });
+  const deleted = await prisma.userRole.deleteMany({
+    where: {
+      userId,
+      schoolId,
+    },
+  });
 
-    if (deleted.count === 0) {
-      throw new APIError("NOT_FOUND", "User role not found in this school");
-    }
-
-    return deleted;
-  } catch (error: any) {
-    if (error instanceof APIError) {
-      throw error;
-    }
-    if (error.code === "P2004") {
-      throw new APIError("CONFLICT", "Cannot remove the last admin from a school");
-    }
-    throw error;
+  if (deleted.count === 0) {
+    throw new APIError("NOT_FOUND", "User role not found in this school");
   }
+
+  return deleted;
 }

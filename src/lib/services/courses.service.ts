@@ -1,6 +1,7 @@
 import { CourseStatus } from "@prisma/client";
 import { APIError } from "../errors";
 import { prisma } from "../prisma";
+import { requireNotNull } from "../require-not-null";
 
 /**
  * Courses Service - Works with actual Prisma schema
@@ -16,45 +17,31 @@ export async function createCourse(data: {
   endDate: Date;
   maxStudents: number;
 }) {
-  const syllabus = await prisma.syllabus.findUnique({
-    where: { id: data.syllabusId },
-    select: { status: true },
+  const syllabus = await prisma.syllabus.findFirst({
+    where: {
+      id: data.syllabusId,
+      status: "FINAL",
+    },
+    select: { id: true },
   });
 
   if (!syllabus) {
-    throw new APIError("NOT_FOUND", "Syllabus not found");
-  }
-
-  if (syllabus.status !== "FINAL") {
     throw new APIError("CONFLICT", "Can only create courses from published (FINAL) syllabuses");
   }
 
-  try {
-    return await prisma.course.create({
-      data: {
-        schoolId: data.schoolId,
-        syllabusId: data.syllabusId,
-        name: data.name,
-        description: data.description,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        maxStudents: data.maxStudents,
-        status: CourseStatus.pending,
+  return await prisma.course.create({
+    data: {
+      ...data,
+      status: CourseStatus.pending,
+    },
+    include: {
+      school: { select: { id: true, name: true } },
+      syllabus: true,
+      lessons: {
+        orderBy: { sequenceOrder: "asc" },
       },
-      include: {
-        school: { select: { id: true, name: true } },
-        syllabus: true,
-        lessons: {
-          orderBy: { sequenceOrder: "asc" },
-        },
-      },
-    });
-  } catch (error: any) {
-    if (error.code === "P2003") {
-      throw new APIError("NOT_FOUND", "School not found");
-    }
-    throw error;
-  }
+    },
+  });
 }
 
 export async function getCourseById(id: number) {
@@ -85,11 +72,7 @@ export async function getCourseById(id: number) {
     },
   });
 
-  if (!course) {
-    throw new APIError("NOT_FOUND", "Course not found");
-  }
-
-  return course;
+  return requireNotNull(course, "Course not found");
 }
 
 export async function getSchoolCourses(schoolId: number, status?: CourseStatus) {
@@ -118,25 +101,15 @@ export async function updateCourse(
     maxStudents?: number;
   },
 ) {
-  try {
-    return await prisma.course.update({
-      where: { id },
-      data,
-      include: {
-        lessons: {
-          orderBy: { sequenceOrder: "asc" },
-        },
+  return await prisma.course.update({
+    where: { id },
+    data,
+    include: {
+      lessons: {
+        orderBy: { sequenceOrder: "asc" },
       },
-    });
-  } catch (error: any) {
-    if (error.code === "P2025") {
-      throw new APIError("NOT_FOUND", "Course not found");
-    }
-    if (error.code === "P2004") {
-      throw new APIError("INVALID_DATE", "Invalid course dates or constraints");
-    }
-    throw error;
-  }
+    },
+  });
 }
 
 export async function cancelCourse(id: number) {

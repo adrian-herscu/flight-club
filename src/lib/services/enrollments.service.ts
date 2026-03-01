@@ -1,6 +1,7 @@
 import { EnrollmentStatus } from "@prisma/client";
 import { APIError } from "../errors";
 import { prisma } from "../prisma";
+import { requireNotNull } from "../require-not-null";
 
 /**
  * Enrollments Service - Works with actual Prisma schema
@@ -13,7 +14,7 @@ export async function createEnrollment(data: {
   schoolId: number;
 }) {
   // Get course with enrollment count in one query
-  const course = await prisma.course.findUnique({
+  const courseRaw = await prisma.course.findUnique({
     where: { id: data.courseId },
     select: {
       maxStudents: true,
@@ -27,9 +28,7 @@ export async function createEnrollment(data: {
     },
   });
 
-  if (!course) {
-    throw new APIError("NOT_FOUND", "Course not found");
-  }
+  const course = requireNotNull(courseRaw, "Course not found");
 
   const enrolledCount = course._count.enrollments;
   const status =
@@ -37,31 +36,18 @@ export async function createEnrollment(data: {
       ? EnrollmentStatus.waitlist
       : EnrollmentStatus.pending_approval;
 
-  try {
-    return await prisma.studentEnrollment.create({
-      data: {
-        courseId: data.courseId,
-        studentId: data.studentId,
-        schoolId: data.schoolId,
-        status,
-      },
-      include: {
-        course: { select: { id: true, name: true } },
-        student: { select: { id: true, email: true, name: true } },
-      },
-    });
-  } catch (error: any) {
-    if (error.code === "P2002") {
-      throw new APIError(
-        "CONFLICT",
-        "Student is already enrolled or pending approval for this course",
-      );
-    }
-    if (error.code === "P2003") {
-      throw new APIError("NOT_FOUND", "Student not found");
-    }
-    throw error;
-  }
+  return await prisma.studentEnrollment.create({
+    data: {
+      courseId: data.courseId,
+      studentId: data.studentId,
+      schoolId: data.schoolId,
+      status,
+    },
+    include: {
+      course: { select: { id: true, name: true } },
+      student: { select: { id: true, email: true, name: true } },
+    },
+  });
 }
 
 export async function getEnrollmentById(id: number) {
@@ -73,11 +59,7 @@ export async function getEnrollmentById(id: number) {
     },
   });
 
-  if (!enrollment) {
-    throw new APIError("NOT_FOUND", "Enrollment not found");
-  }
-
-  return enrollment;
+  return requireNotNull(enrollment, "Enrollment not found");
 }
 
 export async function getCourseEnrollments(courseId: number, status?: EnrollmentStatus) {
@@ -112,7 +94,7 @@ export async function getStudentEnrollments(studentId: number) {
 }
 
 export async function approveEnrollment(id: number) {
-  const enrollment = await prisma.studentEnrollment.findUnique({
+  const enrollmentRaw = await prisma.studentEnrollment.findUnique({
     where: { id },
     include: {
       course: {
@@ -131,9 +113,7 @@ export async function approveEnrollment(id: number) {
     },
   });
 
-  if (!enrollment) {
-    throw new APIError("NOT_FOUND", "Enrollment not found");
-  }
+  const enrollment = requireNotNull(enrollmentRaw, "Enrollment not found");
 
   if (enrollment.status !== EnrollmentStatus.pending_approval) {
     throw new APIError(

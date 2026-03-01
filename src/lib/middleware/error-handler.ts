@@ -1,20 +1,6 @@
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
-
-/**
- * Custom API Error class
- * Represents application-level errors with HTTP status codes
- */
-export class APIError extends Error {
-  constructor(
-    public statusCode: number,
-    public message: string,
-    public details?: unknown,
-  ) {
-    super(message);
-    this.name = "APIError";
-  }
-}
+import { APIError } from "../errors";
 
 /**
  * Handle errors and return standardized error response object
@@ -98,7 +84,7 @@ export function handleError(error: any, requestId?: string): { status: number; b
         success: false,
         data: null,
         error: {
-          code: error.name,
+          code: error.code,
           message: error.message,
           details: error.details,
         },

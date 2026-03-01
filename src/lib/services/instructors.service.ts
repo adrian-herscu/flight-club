@@ -1,5 +1,6 @@
 import { APIError } from "../errors";
 import { prisma } from "../prisma";
+import { requireNotNull } from "../require-not-null";
 
 /**
  * Instructors Service - Works with actual Prisma schema
@@ -12,7 +13,7 @@ export async function assignInstructor(data: {
   schoolId: number;
 }) {
   // Get course with dates and verify instructor role in one query
-  const [course, hasInstructorRole, existing] = await Promise.all([
+  const [courseRaw, hasInstructorRole, existing] = await Promise.all([
     prisma.course.findUnique({
       where: { id: data.courseId },
       select: { startDate: true, endDate: true },
@@ -34,9 +35,7 @@ export async function assignInstructor(data: {
     }),
   ]);
 
-  if (!course) {
-    throw new APIError("NOT_FOUND", "Course not found");
-  }
+  const course = requireNotNull(courseRaw, "Course not found");
 
   if (!hasInstructorRole) {
     throw new APIError("FORBIDDEN", "User does not have INSTRUCTOR role in this school");
@@ -83,11 +82,7 @@ export async function getAssignmentById(id: number) {
     },
   });
 
-  if (!assignment) {
-    throw new APIError("NOT_FOUND", "Assignment not found");
-  }
-
-  return assignment;
+  return requireNotNull(assignment, "Assignment not found");
 }
 
 export async function getCourseInstructors(courseId: number) {
@@ -118,16 +113,14 @@ export async function getInstructorAssignments(instructorId: number) {
 }
 
 export async function removeInstructorAssignment(id: number) {
-  const assignment = await prisma.instructorAssignment.findUnique({
+  const assignmentRaw = await prisma.instructorAssignment.findUnique({
     where: { id },
     include: {
       course: { select: { status: true } },
     },
   });
 
-  if (!assignment) {
-    throw new APIError("NOT_FOUND", "Assignment not found");
-  }
+  const assignment = requireNotNull(assignmentRaw, "Assignment not found");
 
   if (assignment.course.status === "in_progress") {
     throw new APIError("CONFLICT", "Cannot remove instructor from in-progress course");

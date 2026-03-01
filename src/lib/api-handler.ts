@@ -33,7 +33,8 @@ export function createApiRoute(handler: ApiHandler) {
 
       return NextResponse.json(successResponse(data, requestId), { status });
     } catch (error) {
-      const { status, body } = handleError(error);
+      const requestId = getOrGenerateRequestId(request.headers);
+      const { status, body } = handleError(error, requestId);
       return NextResponse.json(body, { status });
     }
   };

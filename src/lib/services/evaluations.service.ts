@@ -1,6 +1,7 @@
 import { EvaluationResult } from "@prisma/client";
 import { APIError } from "../errors";
 import { prisma } from "../prisma";
+import { requireNotNull } from "../require-not-null";
 
 /**
  * Evaluations Service - Works with actual Prisma schema
@@ -53,33 +54,26 @@ export async function recordEvaluation(data: {
     });
   }
 
-  try {
-    return await prisma.studentLessonEvaluation.create({
-      data: {
-        studentId: data.studentId,
-        enrollmentId: data.enrollmentId,
-        courseLessonId: data.courseLessonId,
-        schoolId: data.schoolId,
-        result: data.result,
-        feedbackNotes: data.feedbackNotes,
-      },
-      include: {
-        student: { select: { id: true, email: true, name: true } },
-        courseLesson: {
-          select: {
-            id: true,
-            title: true,
-            sequenceOrder: true,
-          },
+  return await prisma.studentLessonEvaluation.create({
+    data: {
+      studentId: data.studentId,
+      enrollmentId: data.enrollmentId,
+      courseLessonId: data.courseLessonId,
+      schoolId: data.schoolId,
+      result: data.result,
+      feedbackNotes: data.feedbackNotes,
+    },
+    include: {
+      student: { select: { id: true, email: true, name: true } },
+      courseLesson: {
+        select: {
+          id: true,
+          title: true,
+          sequenceOrder: true,
         },
       },
-    });
-  } catch (error: any) {
-    if (error.code === "P2003") {
-      throw new APIError("NOT_FOUND", "Student or course lesson not found");
-    }
-    throw error;
-  }
+    },
+  });
 }
 
 export async function getEvaluationById(id: number) {
@@ -95,11 +89,7 @@ export async function getEvaluationById(id: number) {
     },
   });
 
-  if (!evaluation) {
-    throw new APIError("NOT_FOUND", "Evaluation not found");
-  }
-
-  return evaluation;
+  return requireNotNull(evaluation, "Evaluation not found");
 }
 
 export async function getCourseLessonEvaluations(courseLessonId: number) {
@@ -271,14 +261,12 @@ export async function passStudent(evaluationId: number) {
 }
 
 export async function failStudent(evaluationId: number, adminNotes?: string) {
-  const evaluation = await prisma.studentLessonEvaluation.findUnique({
+  const evaluationRaw = await prisma.studentLessonEvaluation.findUnique({
     where: { id: evaluationId },
     select: { adminNotes: true },
   });
 
-  if (!evaluation) {
-    throw new APIError("NOT_FOUND", "Evaluation not found");
-  }
+  const evaluation = requireNotNull(evaluationRaw, "Evaluation not found");
 
   return prisma.studentLessonEvaluation.update({
     where: { id: evaluationId },
@@ -293,14 +281,12 @@ export async function failStudent(evaluationId: number, adminNotes?: string) {
 }
 
 export async function markNotAttempted(evaluationId: number, adminNotes?: string) {
-  const evaluation = await prisma.studentLessonEvaluation.findUnique({
+  const evaluationRaw = await prisma.studentLessonEvaluation.findUnique({
     where: { id: evaluationId },
     select: { adminNotes: true },
   });
 
-  if (!evaluation) {
-    throw new APIError("NOT_FOUND", "Evaluation not found");
-  }
+  const evaluation = requireNotNull(evaluationRaw, "Evaluation not found");
 
   return prisma.studentLessonEvaluation.update({
     where: { id: evaluationId },
