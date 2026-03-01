@@ -8,6 +8,7 @@ interface UserProfileData {
   email: string;
   name?: string;
   avatar_url?: string;
+  roles?: string[];
 }
 
 export function UserProfile() {
@@ -18,12 +19,63 @@ export function UserProfile() {
 
   useEffect(() => {
     const loadUser = async () => {
-      if (!supabase) {
-        setLoading(false);
-        return;
-      }
-
       try {
+        // Check if in dev mode
+        const isDevMode = typeof window !== "undefined" && localStorage.getItem("dev-mode") === "true";
+
+        if (isDevMode) {
+          // In dev mode, load from localStorage AND fetch roles from API
+          const devUserEmail = localStorage.getItem("dev-user-email") || "dev@local.com";
+          const devUserName = localStorage.getItem("dev-user-name") || "Dev User";
+          const devUserRole = localStorage.getItem("dev-user-role") || "super-admin";
+
+          // Fetch roles from API
+          try {
+            const response = await fetch("/api/v1/me", {
+              headers: {
+                Authorization: "Bearer dev-mode-local-testing-token",
+                "x-dev-user-email": devUserEmail,
+                "x-dev-user-name": devUserName,
+                "x-dev-user-role": devUserRole,
+              },
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setUser({
+                email: devUserEmail,
+                name: devUserName,
+                avatar_url: undefined,
+                roles: data.data?.roles || [],
+              });
+            } else {
+              // Fallback if API call fails
+              setUser({
+                email: devUserEmail,
+                name: devUserName,
+                avatar_url: undefined,
+                roles: [],
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching roles:", error);
+            setUser({
+              email: devUserEmail,
+              name: devUserName,
+              avatar_url: undefined,
+              roles: [],
+            });
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Supabase auth mode
+        if (!supabase) {
+          setLoading(false);
+          return;
+        }
+
         // Get current user from Supabase auth
         const {
           data: { user: authUser },
@@ -32,11 +84,36 @@ export function UserProfile() {
         if (authUser) {
           // Extract user info from auth user metadata (Google profile data)
           const userMetadata = authUser.user_metadata || {};
-          setUser({
-            email: authUser.email || "",
-            name: userMetadata.full_name || authUser.email?.split("@")[0] || "User",
-            avatar_url: userMetadata.avatar_url,
-          });
+          
+          // Fetch roles from API
+          try {
+            const response = await fetch("/api/v1/me");
+            if (response.ok) {
+              const data = await response.json();
+              setUser({
+                email: authUser.email || "",
+                name: userMetadata.full_name || authUser.email?.split("@")[0] || "User",
+                avatar_url: userMetadata.avatar_url,
+                roles: data.data?.roles || [],
+              });
+            } else {
+              // Fallback if API call fails
+              setUser({
+                email: authUser.email || "",
+                name: userMetadata.full_name || authUser.email?.split("@")[0] || "User",
+                avatar_url: userMetadata.avatar_url,
+                roles: [],
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching roles:", error);
+            setUser({
+              email: authUser.email || "",
+              name: userMetadata.full_name || authUser.email?.split("@")[0] || "User",
+              avatar_url: userMetadata.avatar_url,
+              roles: [],
+            });
+          }
         }
       } catch (error) {
         console.error("Error loading user:", error);
@@ -88,6 +165,11 @@ export function UserProfile() {
           <div className="p-md border-bottom-neutral">
             <div className="user-profile-name">{user.name}</div>
             <div className="user-profile-email">{user.email}</div>
+            {user.roles && user.roles.length > 0 && (
+              <div className="text-xs text-neutral-600 mt-xs">
+                {user.roles.map((role) => role.replace("_", " ")).join(", ")}
+              </div>
+            )}
           </div>
 
           <button onClick={handleLogout} className="user-profile-dropdown-item required-indicator">

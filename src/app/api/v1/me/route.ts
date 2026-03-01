@@ -25,12 +25,29 @@ export async function GET(request: Request) {
     return failure("AUTHENTICATION_REQUIRED", "Not authenticated", 401);
   }
 
+  // DEV MODE: In development, read user info from header or default
+  if (token === "dev-mode-local-testing-token" && process.env.NODE_ENV === "development") {
+    // Get the dev user email from the request header (sent by client)
+    const devUserEmail = request.headers.get("x-dev-user-email") || "dev@local.com";
+    const devUserName = request.headers.get("x-dev-user-name") || "Dev User";
+    const devUserRole = request.headers.get("x-dev-user-role") || "super-admin";
+
+    // Map role to roles array
+    const rolesMap: { [key: string]: string[] } = {
+      "super-admin": ["super_admin"],
+      "admin": ["school_admin"],
+      "instructor": ["instructor"],
+      "student": ["student"],
+    };
+
+    return success({
+      id: 1,
+      email: devUserEmail,
+      name: devUserName,
+      roles: rolesMap[devUserRole] || ["student"],
+    });
+  }
+
   // In production, would validate the JWT token with Supabase/Auth provider
-  // For now, accept any token in dev/test
-  return success({
-    id: 1,
-    email: "dev@local.test",
-    name: "Dev User",
-    roles: ["school_admin"],
-  });
+  return failure("AUTHENTICATION_REQUIRED", "Invalid token", 401);
 }

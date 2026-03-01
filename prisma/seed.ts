@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting database seed...");
 
-  // Create dev user if not exists
+  // Create super-admin dev user if not exists
   let devUser = await prisma.user.findUnique({
     where: { email: "dev@local.com" },
   });
@@ -19,12 +19,12 @@ async function main() {
     devUser = await prisma.user.create({
       data: {
         email: "dev@local.com",
-        name: "Dev User",
+        name: "Dev Super Admin",
         authProvider: "dev",
-        authProviderId: "dev-1",
+        authProviderId: "dev-super-admin",
       },
     });
-    console.log("✅ Created dev user");
+    console.log("✅ Created super-admin dev user");
   }
 
   // Create super-admin role if not exists
@@ -44,6 +44,50 @@ async function main() {
       },
     });
     console.log("✅ Created super-admin role for dev user");
+  }
+
+  // Create dedicated dev users for each role
+  const devUsers = [
+    {
+      email: "admin@local.com",
+      name: "Dev Admin",
+      authProviderId: "dev-admin",
+      roleType: "ADMIN" as const,
+    },
+    {
+      email: "instructor@local.com",
+      name: "Dev Instructor",
+      authProviderId: "dev-instructor",
+      roleType: "INSTRUCTOR" as const,
+    },
+    {
+      email: "student@local.com",
+      name: "Dev Student",
+      authProviderId: "dev-student",
+      roleType: "STUDENT" as const,
+    },
+  ];
+
+  const createdDevUsers: { [key: string]: any } = {};
+
+  for (const userData of devUsers) {
+    let user = await prisma.user.findUnique({
+      where: { email: userData.email },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: userData.email,
+          name: userData.name,
+          authProvider: "dev",
+          authProviderId: userData.authProviderId,
+        },
+      });
+      console.log(`✅ Created ${userData.roleType.toLowerCase()} dev user: ${userData.email}`);
+    }
+
+    createdDevUsers[userData.roleType] = user;
   }
 
   // Create a sample school
@@ -68,7 +112,7 @@ async function main() {
     console.log("✅ Created sample school");
   }
 
-  // Add dev user as school admin
+  // Add super-admin dev user as school admin (keep original behavior)
   const schoolAdminRole = await prisma.userRole.findFirst({
     where: {
       userId: devUser.id,
@@ -85,7 +129,32 @@ async function main() {
         roleType: "ADMIN",
       },
     });
-    console.log("✅ Added dev user as school admin");
+    console.log("✅ Added super-admin dev user as school admin");
+  }
+
+  // Assign school-specific roles to dev users
+  for (const roleType of ["ADMIN", "INSTRUCTOR", "STUDENT"] as const) {
+    const user = createdDevUsers[roleType];
+    if (user) {
+      const existingRole = await prisma.userRole.findFirst({
+        where: {
+          userId: user.id,
+          schoolId: school.id,
+          roleType: roleType,
+        },
+      });
+
+      if (!existingRole) {
+        await prisma.userRole.create({
+          data: {
+            userId: user.id,
+            schoolId: school.id,
+            roleType: roleType,
+          },
+        });
+        console.log(`✅ Assigned ${roleType.toLowerCase()} role to ${user.email} for school`);
+      }
+    }
   }
 
   // Create a sample syllabus

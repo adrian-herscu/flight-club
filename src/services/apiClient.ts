@@ -46,6 +46,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
+      // In dev mode, add dev user info to headers
+      if (typeof window !== "undefined" && localStorage.getItem("dev-mode") === "true") {
+        const devUserEmail = localStorage.getItem("dev-user-email");
+        const devUserName = localStorage.getItem("dev-user-name");
+        const devUserRole = localStorage.getItem("dev-user-role");
+
+        if (devUserEmail) headers["X-Dev-User-Email"] = devUserEmail;
+        if (devUserName) headers["X-Dev-User-Name"] = devUserName;
+        if (devUserRole) headers["X-Dev-User-Role"] = devUserRole;
+      }
+
       const response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
         headers,
