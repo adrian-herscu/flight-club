@@ -84,10 +84,16 @@ export default function LoginContent() {
       if (!supabase) {
         throw new Error("Missing Supabase environment variables");
       }
+
+      // Construct the callback URL dynamically based on current domain
+      // This works with localhost, Vercel previews, and production
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const callbackUrl = `${origin}/auth/callback?redirect=${encodeURIComponent(redirectPath)}`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectPath)}`,
+          redirectTo: callbackUrl,
         },
       });
 
