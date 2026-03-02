@@ -1,11 +1,10 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, hasSupabaseConfig } from "@/services/supabaseClient";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -64,4 +63,8 @@ export default function AuthCallbackPage() {
       {error ? <div className="error-text">Error: {error}</div> : <div>Signing you in...</div>}
     </div>
   );
+}
+
+export default function AuthCallbackPage() {
+  return <AuthCallbackContent />;
 }

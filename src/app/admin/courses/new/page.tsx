@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -15,7 +14,7 @@ interface Syllabus {
   finalized_at: string | null;
 }
 
-export default function NewCoursePage() {
+function NewCourseContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentSchool, loading: schoolLoading } = useSchool();
@@ -48,9 +47,11 @@ export default function NewCoursePage() {
         "/api/v1/syllabuses",
       );
       const items = (data as any).items || (data as any).data || (Array.isArray(data) ? data : []);
-      setSyllabuses(items);
-    } catch {
-      // Fallback: syllabuses list will be empty, user can still pick if they know the ID
+      const finalSyllabuses = items.filter((s: Syllabus) => s.finalized_at !== null);
+      setSyllabuses(finalSyllabuses);
+    } catch (err) {
+      console.error("Failed to fetch syllabuses:", err);
+      setError("Failed to load syllabuses");
     } finally {
       setLoadingSyllabuses(false);
     }
@@ -59,163 +60,133 @@ export default function NewCoursePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSchool) {
-      setError("No school selected. Please select a school first.");
-      return;
-    }
-    if (!form.syllabusId || !form.name || !form.startDate || !form.endDate || !form.maxStudents) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-    if (new Date(form.startDate) >= new Date(form.endDate)) {
-      setError("End date must be after start date.");
+      setError("School not selected");
       return;
     }
 
     setSaving(true);
     setError(null);
+
     try {
-      const created = await apiClient.post<{ id: number }>("/api/v1/courses", {
-        schoolId: currentSchool.id,
-        syllabusId: parseInt(form.syllabusId),
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        maxStudents: parseInt(form.maxStudents),
-        startDate: new Date(form.startDate).toISOString(),
-        endDate: new Date(form.endDate).toISOString(),
+      const response = await apiClient.post("/api/v1/courses", {
+        school_id: currentSchool.id,
+        syllabus_id: parseInt(form.syllabusId),
+        title: form.name,
+        description: form.description || null,
+        max_students: form.maxStudents ? parseInt(form.maxStudents) : null,
+        start_date: form.startDate || null,
+        end_date: form.endDate || null,
       });
-      router.push(`/admin/courses/${created.id}`);
+
+      if (response && (response as any).id) {
+        router.push("/admin/courses");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create course");
+    } finally {
       setSaving(false);
     }
   };
 
-  const field = (key: keyof typeof form, value: string) => setForm((f) => ({ ...f, [key]: value }));
-
-  if (schoolLoading) return <div>Loading...</div>;
-
   return (
-    <div>
-      <button onClick={() => router.push("/admin/courses")} className="back-button">
-        ← Back to Courses
-      </button>
+    <div className="page-wrapper">
+      <div className="page-header">
+        <h1 className="page-title">Create New Course</h1>
+      </div>
 
-      <h1 className="page-title">Create New Course</h1>
-      <p className="muted-paragraph">
-        Create a course based on a published syllabus for
-        {currentSchool ? <strong> {currentSchool.name}</strong> : " your school"}.
-      </p>
+      {error && <div className="error-box mb-lg">{error}</div>}
+      {schoolLoading && <div className="loading-text">Loading school...</div>}
 
-      {!currentSchool && (
-        <div className="warning-box">
-          ⚠️ No school selected. Use the school switcher in the sidebar to select a school.
-        </div>
-      )}
-
-      {error && <div className="error-box">{error}</div>}
-
-      <form onSubmit={handleSubmit}>
-        <div className="field-group">
-          <label className="field-label">
-            Syllabus <span className="required">*</span>
-          </label>
-          {loadingSyllabuses ? (
-            <div className="helper-text">Loading syllabuses...</div>
-          ) : syllabuses.length > 0 ? (
-            <select
-              value={form.syllabusId}
-              onChange={(e) => field("syllabusId", e.target.value)}
-              required
-              className="field-input"
-            >
-              <option value="">— Select a syllabus —</option>
-              {syllabuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.title} (v{s.version}, {s.lesson_count} lessons)
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div>
-              <input
-                type="number"
-                value={form.syllabusId}
-                onChange={(e) => field("syllabusId", e.target.value)}
-                placeholder="Enter syllabus ID"
-                required
-                className="field-input"
-              />
-              <p className="helper-text">
-                No published syllabuses found. Ask a super-admin to create and publish one first.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="field-group">
-          <label className="field-label">
-            Course Name <span className="required">*</span>
+      <form onSubmit={handleSubmit} className="form">
+        <div className="form-group">
+          <label htmlFor="name" className="form-label">
+            Course Name *
           </label>
           <input
             type="text"
+            id="name"
             value={form.name}
-            onChange={(e) => field("name", e.target.value)}
-            placeholder="e.g. P2 Paragliding — Spring 2026 Cohort"
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="form-input"
             required
-            autoFocus={!preselectedSyllabusId}
-            className="field-input"
           />
         </div>
 
-        <div className="field-group">
-          <label className="field-label">Description</label>
-          <textarea
-            value={form.description}
-            onChange={(e) => field("description", e.target.value)}
-            placeholder="Additional details about this course run"
-            rows={3}
-            className="field-textarea"
-          />
-        </div>
-
-        <div className="field-group">
-          <label className="field-label">
-            Max Students <span className="required">*</span>
+        <div className="form-group">
+          <label htmlFor="syllabus" className="form-label">
+            Syllabus *
           </label>
-          <input
-            type="number"
-            value={form.maxStudents}
-            onChange={(e) => field("maxStudents", e.target.value)}
-            placeholder="e.g. 8"
-            min={1}
-            required
-            className="field-input"
+          {loadingSyllabuses ? (
+            <div className="loading-text">Loading syllabuses...</div>
+          ) : (
+            <select
+              id="syllabus"
+              value={form.syllabusId}
+              onChange={(e) => setForm({ ...form, syllabusId: e.target.value })}
+              className="form-input"
+              required
+            >
+              <option value="">Select a syllabus...</option>
+              {syllabuses.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title} (v{s.version})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="description" className="form-label">
+            Description
+          </label>
+          <textarea
+            id="description"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="form-input"
+            rows={4}
           />
         </div>
 
-        <div className="grid-gap-lg" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div>
-            <label className="field-label">
-              Start Date <span className="required">*</span>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="maxStudents" className="form-label">
+              Max Students
             </label>
             <input
-              type="datetime-local"
-              value={form.startDate}
-              onChange={(e) => field("startDate", e.target.value)}
-              required
-              className="field-input"
+              type="number"
+              id="maxStudents"
+              value={form.maxStudents}
+              onChange={(e) => setForm({ ...form, maxStudents: e.target.value })}
+              className="form-input"
+              min="1"
             />
           </div>
-          <div>
-            <label className="field-label">
-              End Date <span className="required">*</span>
+
+          <div className="form-group">
+            <label htmlFor="startDate" className="form-label">
+              Start Date
             </label>
             <input
-              type="datetime-local"
+              type="date"
+              id="startDate"
+              value={form.startDate}
+              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="endDate" className="form-label">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="endDate"
               value={form.endDate}
-              onChange={(e) => field("endDate", e.target.value)}
-              required
-              className="field-input"
+              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+              className="form-input"
             />
           </div>
         </div>
@@ -235,4 +206,8 @@ export default function NewCoursePage() {
       </form>
     </div>
   );
+}
+
+export default function NewCoursePage() {
+  return <NewCourseContent />;
 }
