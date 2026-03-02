@@ -111,6 +111,43 @@ npm run test:e2e:only # Only vitest e2e (vs playwright)
    - Tests run against the same integrated application
    - All tests can be unit tests (mocking) or integration tests (hitting real endpoints)
 
+## Authentication in Tests
+
+### Development Mode Bypass
+
+For contract and integration tests, authenticated endpoints accept a dev token:
+
+```typescript
+const request = new Request("http://localhost:3000/api/v1/me", {
+  headers: {
+    authorization: "Bearer dev-mode-local-testing-token",
+    "x-dev-user-email": "test@example.com",
+    "x-dev-user-name": "Test User",
+    "x-dev-user-role": "admin" // or "super-admin", "instructor", "student"
+  }
+});
+```
+
+**Requirements**:
+- `NODE_ENV` must be `"development"`
+- Token must be exactly `"dev-mode-local-testing-token"`
+- Dev headers are optional but control mock user attributes
+
+**Role Mapping**:
+- `"super-admin"` → `["super_admin"]`
+- `"admin"` → `["school_admin"]`
+- `"instructor"` → `["instructor"]`
+- `"student"` → `["student"]`
+
+**Production Mode**:
+- Dev token is rejected
+- Must use valid Supabase JWT
+- No header-based user override
+
+⚠️ **Security Note**: This bypass is **disabled** in production (`NODE_ENV !== "development"`).
+
+---
+
 ## Common Issues
 
 ### Tests Failing with "fetch failed"?
@@ -118,6 +155,13 @@ Make sure dev server is running:
 ```bash
 npm run dev
 ```
+
+### Tests Failing with 401 Unauthorized?
+For authenticated endpoints, use the dev token:
+```typescript
+headers: { authorization: "Bearer dev-mode-local-testing-token" }
+```
+Ensure `NODE_ENV` is `"development"` (default in vitest).
 
 ### Need to skip integration tests in CI?
 Run only unit tests:

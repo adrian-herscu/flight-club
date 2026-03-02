@@ -54,6 +54,16 @@ Public. Returns server health. Does **not** follow standard response envelope.
 
 Returns the authenticated user's profile and all their role memberships. On first login (user record does not exist), this endpoint automatically creates the `User` record from the Supabase JWT claims (email, name, avatar).
 
+**Development Mode Bypass**:  
+Accepts `Authorization: Bearer dev-mode-local-testing-token` when `NODE_ENV === "development"`.  
+Optional override headers:
+- `x-dev-user-email`: Override email (default: `"dev@local.com"`)
+- `x-dev-user-name`: Override display name (default: `"Dev User"`)
+- `x-dev-user-role`: Override role (default: `"super-admin"`)
+  - Valid values: `"super-admin"`, `"admin"`, `"instructor"`, `"student"`
+
+**Production Mode**: Requires valid Supabase JWT; dev token is rejected with HTTP 401.
+
 **Response 200**:
 ```json
 {

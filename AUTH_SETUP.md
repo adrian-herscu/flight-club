@@ -98,6 +98,46 @@ This guide covers setup for both **local development** (with dev login bypass) a
 
 1. In Supabase dashboard, go to **Settings** → **API** → **JWT Settings**
 2. Under **Legacy JWT Secret**, copy the secret value
+
+---
+
+## Part 5: Testing Without OAuth
+
+### 5.1 Development Mode Bypass
+
+The `/api/v1/me` endpoint supports a dev mode bypass for local testing and contract tests:
+
+**Usage in Tests**:
+```typescript
+const request = new Request("http://localhost:3000/api/v1/me", {
+  headers: {
+    authorization: "Bearer dev-mode-local-testing-token",
+    "x-dev-user-email": "dev@local.test",
+    "x-dev-user-name": "Dev User",
+    "x-dev-user-role": "admin"
+  }
+});
+```
+
+**Usage with curl**:
+```bash
+curl -H "Authorization: Bearer dev-mode-local-testing-token" \
+     -H "x-dev-user-role: admin" \
+     http://localhost:3000/api/v1/me
+```
+
+**Mock User Attributes**:
+- `x-dev-user-email`: Defaults to `"dev@local.com"`
+- `x-dev-user-name`: Defaults to `"Dev User"`
+- `x-dev-user-role`: Defaults to `"super-admin"`
+  - Valid values: `"super-admin"`, `"admin"`, `"instructor"`, `"student"`
+  - Maps to roles: `super_admin`, `school_admin`, `instructor`, `student`
+
+**Requirements**:
+- `NODE_ENV` must be `"development"` (not `"test"` or `"production"`)
+- Token must be exactly `"dev-mode-local-testing-token"`
+
+⚠️ **Security Note**: This bypass is **disabled** in production. Any attempt to use the dev token when `NODE_ENV !== "development"` returns HTTP 401.
 3. This is needed for backend JWT verification
 
 ### 4.2 Create `.env.local`

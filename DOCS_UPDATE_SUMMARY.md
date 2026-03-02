@@ -1,5 +1,67 @@
 # Documentation Update Summary
 
+## 2 March 2026 — Global CSS Refactor, UI Recovery, and Guardrails
+
+### Session outcomes documented
+
+- Updated: [SESSION_SUMMARY_2026-03-02.md](SESSION_SUMMARY_2026-03-02.md)
+  - Captures the end-to-end narrative of consolidating CSS modules and inline styles
+    into `src/app/globals.css`.
+  - Describes how the UI temporarily became unusable (broken imports, duplicate
+    functions, malformed hook) and how it was recovered.
+  - Records process lessons learned about Next.js caching, wide refactors, and the
+    need for runtime smoke validation.
+
+### Governance updates
+
+- Updated: [.specify/memory/constitution.md](.specify/memory/constitution.md)
+  - Version bumped `1.4.3 → 1.4.4`.
+  - Principle V clarified with **Runtime Smoke Validation for Cross-Cutting Refactors**:
+    - For broad changes (CSS consolidation, shared middleware/hooks, global layout),
+      a clean compile and passing unit tests are necessary but not sufficient.
+    - Requires a focused runtime smoke pass: dev login + navigation to at least one
+      primary page per affected role.
+
+### Copilot guidance updates
+
+- Updated: [.github/copilot-instructions.md](.github/copilot-instructions.md)
+  - Documented the current styling approach: consolidated global CSS utilities in
+    `src/app/globals.css` migrated from CSS modules and inline styles.
+  - Added explicit guidance to treat `globals.css` edits and other cross-cutting
+    styling changes as high-risk refactors that require a runtime smoke pass
+    (dev login + key dashboards) after static checks pass.
+  - Added a **UI & Refactor Validation** section under Testing Approach describing
+    when and how to run these smoke checks.
+
+---
+
+## 2 March 2026 — Acceptance Validation + Governance Update
+
+### Session outcomes documented
+
+- Added: [docs/session-retrospective-2026-03-02.md](docs/session-retrospective-2026-03-02.md)
+  - Runtime validation narrative for User Story 1 and User Story 2
+  - Defects discovered during acceptance testing
+  - Fixes applied (including course lesson-copy invariant)
+  - Introspection and process lessons
+  - Follow-up actions
+
+### Governance updates
+
+- Updated: [.specify/memory/constitution.md](.specify/memory/constitution.md)
+  - Version bumped `1.4.1 → 1.4.2`
+  - Added Principle V clarification: **Acceptance Validation Protocol**
+    - API/data pass + click-only UI pass
+    - Defect classification (implementation vs workflow)
+    - PASS/FAIL/BLOCKED scenario disposition requirement
+
+### Copilot guidance updates
+
+- Updated: [.github/copilot-instructions.md](.github/copilot-instructions.md)
+  - Added actionable acceptance-validation workflow under Testing
+
+---
+
 **Date**: 28 February 2026  
 **Changes**: Google OAuth setup, credentials configuration, and user profile feature documentation
 

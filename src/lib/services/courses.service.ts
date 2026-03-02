@@ -17,30 +17,58 @@ export async function createCourse(data: {
   endDate: Date;
   maxStudents: number;
 }) {
+  // Fetch syllabus with its lessons
   const syllabus = await prisma.syllabus.findFirst({
     where: {
       id: data.syllabusId,
       status: "FINAL",
     },
-    select: { id: true },
+    include: {
+      lessons: {
+        orderBy: { order: "asc" },
+      },
+    },
   });
 
   if (!syllabus) {
     throw new APIError("CONFLICT", "Can only create courses from published (FINAL) syllabuses");
   }
 
-  return await prisma.course.create({
-    data: {
-      ...data,
-      status: CourseStatus.pending,
-    },
-    include: {
-      school: { select: { id: true, name: true } },
-      syllabus: true,
-      lessons: {
-        orderBy: { sequenceOrder: "asc" },
+  // Create course and copy all lessons from syllabus in a transaction
+  return await prisma.$transaction(async (tx) => {
+    const course = await tx.course.create({
+      data: {
+        ...data,
+        status: CourseStatus.pending,
       },
-    },
+    });
+
+    // Copy lessons from syllabus to course
+    if (syllabus.lessons.length > 0) {
+      await tx.courseLesson.createMany({
+        data: syllabus.lessons.map((lesson) => ({
+          courseId: course.id,
+          title: lesson.title,
+          description: lesson.description || "",
+          sequenceOrder: lesson.order,
+          status: "scheduled",
+          durationHours: 2.0, // Default 2 hours, admin can adjust later
+          // startTime and location will be set later by admin
+        })),
+      });
+    }
+
+    // Return course with full relations
+    return await tx.course.findUniqueOrThrow({
+      where: { id: course.id },
+      include: {
+        school: { select: { id: true, name: true } },
+        syllabus: true,
+        lessons: {
+          orderBy: { sequenceOrder: "asc" },
+        },
+      },
+    });
   });
 }
 

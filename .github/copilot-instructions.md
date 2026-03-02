@@ -226,6 +226,19 @@ When context files don't provide specific guidance:
 - Checklists (`.specify/templates/checklist-template.md` format) serve as "unit tests for requirements" — they validate the quality of spec documents, not implementation correctness
 - Analyze phase (`speckit.analyze`) is read-only; never modify documents during analysis
 
+### UI & Refactor Validation
+
+- For broad, cross-cutting changes that affect many routes (e.g., global CSS
+  consolidation, shared middleware/hooks, layout shell changes), static checks
+  (`npm run build`, type-checking) are **necessary but not sufficient**.
+- After static checks pass, always:
+  - Start a fresh dev server (kill old processes, clear `.next`/`.turbo` if errors
+    appear inconsistent with current source).
+  - Perform a minimal runtime smoke pass: use dev login, then navigate to at least
+    one primary page for each affected role (Admin, Instructor, Student, Super Admin).
+- Do not mark cross-cutting refactor tasks as done until this smoke pass succeeds
+  without runtime errors in the browser console.
+
 ---
 
 ## Technology-Specific Guidelines
@@ -245,6 +258,18 @@ When context files don't provide specific guidance:
 - All tenant-scoped DB queries MUST filter by `school_id` (see Principle I).
 - JWT verification uses `jose` library with Supabase's public JWKS endpoint; never hardcode keys.
 - Supabase service-role key is server-side only (in `.env.local`); never expose to frontend.
+- **Error Handling**:
+  - **Database Errors**: Never wrap Prisma calls in try/catch. Global middleware in
+    `src/lib/prisma.ts` handles error mapping (P2002 → CONFLICT, P2003/P2025 → NOT_FOUND, P2004 → CONFLICT).
+  - **Null Checks**: Use `requireNotNull<T>(value, message)` from `src/lib/require-not-null.ts`
+    for business logic presence validation. **Always assign the return value** to achieve type narrowing:
+    ```typescript
+    const userRaw = await prisma.user.findUnique({ where: { id } });
+    const user = requireNotNull(userRaw, "User not found");
+    // 'user' is now type-narrowed to non-null; TypeScript allows safe access to properties
+    ```
+  - **Route Handlers**: Delegate error handling to error middleware; never catch errors
+    in route logic unless performing explicit fallback/recovery.
 - **Logging**: use structured logging with JSON output to `stdout`. Every log record
   related to a request MUST include `request_id`. Use log levels: `debug` for internal
   state, `info` for normal operations, `warn` for recoverable issues, `error` for exceptions.
@@ -266,6 +291,15 @@ When context files don't provide specific guidance:
 - API calls to the Next.js API backend include `Authorization: Bearer <jwt>` header;
   never call the backend from Server Components without the user's token.
 - Tailwind CSS for styling; no CSS-in-JS libraries.
+- In this codebase, styling is currently implemented via a consolidated global CSS
+  file (`src/app/globals.css`) with shared utility classes migrated from legacy CSS
+  modules and inline styles. Treat edits to `globals.css` and other cross-cutting
+  styling changes as **high-risk refactors**:
+  - Prefer working feature-by-feature (e.g., admin, student, instructor) instead of
+    editing every page at once.
+  - After significant CSS/layout changes, always run the dev server and perform a
+    quick runtime smoke pass (dev login + navigation to key dashboards) before
+    declaring the work complete.
 - Follow `frontend/src/` naming: `PascalCase` components, `camelCase` hooks
   prefixed `use`, `camelCase` utility functions.
 
@@ -277,6 +311,17 @@ When context files don't provide specific guidance:
 - **Frontend / E2E**: Playwright; smoke suite runs on every PR via GitHub Actions.
 - Tests are written **before** implementation (Red-Green-Refactor — see Principle III).
   No PR merges without prior failing tests.
+- **Dev Mode Authentication**: The `/api/v1/me` endpoint and auth middleware (`src/lib/middleware/auth.ts`)
+  accept `Authorization: Bearer dev-mode-local-testing-token` when `NODE_ENV === "development"`.
+  Contract tests MUST use this exact token value. Optional headers (`x-dev-user-email`,
+  `x-dev-user-name`, `x-dev-user-role`) override mock user attributes. In production,
+  dev token is rejected with HTTP 401. See `AUTH_SETUP.md` Part 5 and `TESTING.md`
+  Authentication section for complete usage.
+- **Acceptance Validation Workflow** (when validating spec scenarios):
+  1. Run an API/data pass first (endpoint behavior + database invariants).
+  2. Run a click-only UI pass second (links/buttons/forms only; no URL shortcutting).
+  3. Report outcomes per scenario as `PASS` / `FAIL` / `BLOCKED` with explicit evidence.
+  4. Separate true implementation defects from UX/navigation workflow defects.
 
 ### Secrets & Environment
 

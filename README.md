@@ -79,6 +79,9 @@ API: `http://localhost:3000/api/v1/`
   - `quickstart.md` - Getting started guide
   - `contracts/api-v1.md` - API contracts
 
+- **Session Retrospectives**:
+  - [docs/session-retrospective-2026-03-02.md](docs/session-retrospective-2026-03-02.md) - Acceptance validation findings, fixes, and process introspection
+
 - **Migration History**: `docs/migration/`
   - Migration documentation from multi-service to Next.js full-stack
 

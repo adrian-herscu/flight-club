@@ -1,24 +1,36 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.4.0 → 1.4.1
-Modified principles: none
+Version change: 1.4.4 → 1.5.0
+Modified principles:
+  - NEW Principle VII: Error Handling Architecture (centralized error mapping)
+  - Renumbered subsequent sections
 Added guidance:
-  - NEW Principle V: "Test Infrastructure & Development Methodology" — ERROR vs
-    FAILURE doctrine, fixture architecture (dedicated clients + factories), fixture
-    dependency graphs, static analysis before dynamic testing (Pylance first),
-    model truth principle, TDD phases with success criteria.
-  - Development Workflow: added step 2 (Pylance check) to local development cycle.
-  - Principles V–VII renumbered (Cloud Deployment now VI, Technology Stack now VII).
-  - .github/copilot/copilot-instructions.md ✅ — test infrastructure guidance
-    added to Python/FastAPI section.
-Removed: N/A
+  - Database errors MUST use Prisma middleware for error mapping
+  - Null checks MUST use requireNotNull<T>() helper with assignment for type safety
+  - Services MUST NOT contain try/catch around Prisma calls
+  - Single source of truth for error-to-HTTP mapping in error middleware
+Removed: none
 Templates checked:
   - .specify/templates/plan-template.md ✅ — no structural change needed
   - .specify/templates/spec-template.md ✅ — no structural change needed
   - .specify/templates/tasks-template.md ✅ — no structural change needed
-  - .specify/templates/commands/*.md ⚠ PENDING — directory does not exist in repo
-Follow-up TODOs: none
+Follow-up TODOs:
+  - Create docs/adr/003-centralized-error-handling.md with architecture rationale
+  - Add Prisma error code reference to docs/
+  - Monitor for services violating no-try/catch rule in future PRs
+Rationale:
+  - Session 2025-03-02 achieved 100-line reduction via centralized error handling
+  - Pattern proven with 20/20 tests passing and zero TypeScript errors
+  - Codifies architectural decision for consistency across all future services
+Previous changes (1.4.3 → 1.4.4):
+  - Added Contract Test Maintenance requirement to Principle III
+  - Added runtime smoke validation for cross-cutting refactors to Principle V
+Previous changes (1.4.2 → 1.4.3):
+  - Added Contract Test Maintenance requirement to Principle III
+Previous changes (1.4.1 → 1.4.2):
+  - Added Acceptance Validation Protocol to Principle V
+  - Established two-pass validation: API/data then click-only UI
 -->
 
 # Flight Club CRM Constitution
@@ -91,6 +103,11 @@ introducing business logic will be merged without prior failing tests.
 - Integration tests MUST cover at minimum: booking conflict detection, certificate
   expiry checks, and role-based access control enforcement.
 - Tests MUST be runnable with a single command (`npm test`) in CI and locally.
+- **Contract Test Maintenance**: When authentication, authorization, or API contract
+  logic changes, contract tests in `tests/contract/` MUST be updated in the same
+  commit. Contract tests verify the API surface area matches documented behavior;
+  misaligned tests are equivalent to outdated documentation and MUST NOT persist
+  across PR reviews.
 
 **Rationale**: Booking and compliance errors in a flight school have real safety
 consequences; catching them via automated tests before production is non-negotiable.
@@ -229,6 +246,15 @@ Workflow:
 
 Skipping step 2 guarantees multiple test iterations per issue.
 
+**Runtime Smoke Validation for Cross-Cutting Refactors**: For broad, cross-cutting
+changes (CSS consolidation, shared middleware, hooks used across many routes, global
+layout changes), a clean TypeScript compile and passing unit tests are **necessary but
+not sufficient**. After static analysis passes:
+- Start the dev server from a clean slate (kill old processes, clear `.next`/`.turbo`).
+- Execute a narrow smoke pass through core flows: dev login, then navigate to at least
+  one primary page per affected role (e.g. Admin dashboard, Student courses).
+- Only after this smoke pass succeeds may a cross-cutting refactor be treated as "done".
+
 **TDD Phases** (strictly sequential):
 - **Phase 1**: Contracts written; tests exist in `tests/contract/` with failing assertions
 - **Phase 2**: Test infrastructure to 0 ERRORs; all fixtures created and valid
@@ -243,6 +269,20 @@ Success criterion for each phase:
 
 Do **not** skip Phase 2. Do **not** mix Phase 2 and Phase 3. Do **not** run tests
 without Pylance check first.
+
+**Acceptance Validation Protocol** (runtime scenario verification):
+- Every acceptance scenario MUST be validated in two passes when UI exists:
+  1. **API/Data pass**: verify endpoint behavior, state transitions, and persisted
+     data invariants.
+  2. **Click-only UI pass**: execute the same scenario through user-visible links,
+     buttons, and forms (no address-bar shortcuts), and verify user-observable
+     outcomes.
+- Validation reports MUST classify findings into:
+  - **Implementation defects** (service/API/domain logic), and
+  - **Workflow defects** (navigation, discoverability, broken UI interactions).
+- Acceptance reports MUST include an explicit scenario disposition table (PASS,
+  FAIL, BLOCKED), evidence references, and whether any FAIL is due to declared
+  out-of-scope roadmap work.
 
 **Rationale**: Test infrastructure failures and implementation failures require
 different debugging mindsets. Confusing them leads to chasing phantom bugs in test
@@ -310,6 +350,32 @@ MUST be justified; YAGNI applies everywhere.
 
 **Rationale**: Over-engineering flight-school software has historically delayed
 projects by months; shipping a simple, working tool delivers real value early.
+
+### VII. Error Handling Architecture
+
+All infrastructure error mapping MUST be centralized; services MUST contain only
+business logic validation.
+
+- **Database Errors**: Prisma error codes (P2002, P2003, P2004, P2025) are translated
+  to `APIError` types globally in `src/lib/prisma.ts` middleware. Services MUST NOT
+  contain try/catch blocks around Prisma calls.
+- **Null Checks**: Business logic presence validation MUST use `requireNotNull<T>(value, message)`
+  helper from `src/lib/require-not-null.ts`. The return value MUST be assigned to
+  achieve TypeScript type narrowing:
+  ```typescript
+  const userRaw = await prisma.user.findUnique({ where: { id } });
+  const user = requireNotNull(userRaw, "User not found");
+  // 'user' is now type-safe (non-null); safe to access properties
+  ```
+- **Route Handlers**: Error handling is delegated to error middleware; route logic
+  MUST NOT catch errors unless performing explicit fallback/recovery.
+- **Single Source of Truth**: Error-to-HTTP-status mapping lives in error middleware
+  (`src/lib/middleware/error-handler.ts`), never duplicated across routes.
+
+**Rationale**: Centralizing error mapping ensures consistent API responses, reduces
+boilerplate (100+ line reduction achieved in practice), prevents type-unsafe null
+access, and maintains a clear separation between infrastructure concerns (database
+constraints) and domain semantics (APIError types).
 
 ## Technology Stack & Architecture
 
@@ -468,4 +534,4 @@ that introduces the conflict.
   be recorded in the plan's "Complexity Tracking" section with measurable
   justification.
 
-**Version**: 1.4.1 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-02-27
+**Version**: 1.4.2 | **Ratified**: 2026-02-24 | **Last Amended**: 2026-03-02
