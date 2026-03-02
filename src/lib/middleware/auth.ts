@@ -107,6 +107,7 @@ export async function getCurrentUser(authHeader: string): Promise<User> {
 /**
  * Sync user from JWT payload
  * Creates new user if doesn't exist, updates if exists
+ * Auto-assigns STUDENT role to new users (except super-admins)
  * @param payload JWT payload
  * @returns User object
  */
@@ -119,6 +120,8 @@ async function syncUserFromToken(payload: JWTPayload): Promise<User> {
   let user = await prisma.user.findUnique({
     where: { email },
   });
+
+  const isNewUser = !user;
 
   if (!user) {
     // Create new user
@@ -137,6 +140,30 @@ async function syncUserFromToken(payload: JWTPayload): Promise<User> {
         where: { id: user.id },
         data: { name },
       });
+    }
+  }
+
+  // Auto-assign STUDENT role to new users (unless they're already a super-admin)
+  if (isNewUser) {
+    const existingRoles = await prisma.userRole.findMany({
+      where: { userId: user.id },
+    });
+
+    // Only auto-assign STUDENT role if user has no roles yet
+    if (existingRoles.length === 0) {
+      // Get the first school to assign them to (demo purposes)
+      const firstSchool = await prisma.school.findFirst();
+
+      if (firstSchool) {
+        await prisma.userRole.create({
+          data: {
+            userId: user.id,
+            schoolId: firstSchool.id,
+            roleType: "STUDENT",
+          },
+        });
+        console.log(`✅ Auto-assigned STUDENT role to new user: ${email}`);
+      }
     }
   }
 

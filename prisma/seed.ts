@@ -46,6 +46,42 @@ async function main() {
     console.log("✅ Created super-admin role for dev user");
   }
 
+  // Create demo super-admin user for production
+  let demoSuperAdmin = await prisma.user.findUnique({
+    where: { email: "adrian.herscu@gmail.com" },
+  });
+
+  if (!demoSuperAdmin) {
+    demoSuperAdmin = await prisma.user.create({
+      data: {
+        email: "adrian.herscu@gmail.com",
+        name: "Adrian Herscu",
+        authProvider: "google",
+        authProviderId: "google-oauth-placeholder",
+      },
+    });
+    console.log("✅ Created demo super-admin user");
+  }
+
+  // Create super-admin role for demo user if not exists
+  const demoSuperAdminRole = await prisma.userRole.findFirst({
+    where: {
+      userId: demoSuperAdmin.id,
+      roleType: "SUPER_ADMIN",
+    },
+  });
+
+  if (!demoSuperAdminRole) {
+    await prisma.userRole.create({
+      data: {
+        userId: demoSuperAdmin.id,
+        roleType: "SUPER_ADMIN",
+        schoolId: null,
+      },
+    });
+    console.log("✅ Created super-admin role for demo user");
+  }
+
   // Create dedicated dev users for each role
   const devUsers = [
     {
