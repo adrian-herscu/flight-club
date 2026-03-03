@@ -5,9 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
-export const supabase = hasSupabaseConfig 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+export const supabase = hasSupabaseConfig ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 /**
  * Get current auth token for API requests
