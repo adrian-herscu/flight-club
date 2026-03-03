@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, hasSupabaseConfig } from "@/services/supabaseClient";
 
@@ -18,8 +18,40 @@ export default function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDevUser, setSelectedDevUser] = useState<string>("dev@local.com");
+  const isDevMode = process.env.NODE_ENV === "development";
+
+  const verifyAndRedirect = useCallback(
+    async (token: string) => {
+      try {
+        // Test if we can access the API with this token
+        const response = await fetch("/api/v1/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          // Only redirect if API access works
+          router.push(redirectPath);
+        } else {
+          // Session exists but API fails - clear the session and show error
+          console.error("API validation failed:", response.status);
+          await supabase?.auth.signOut();
+          setError("Failed to validate your account. Please try logging in again.");
+        }
+      } catch (err) {
+        console.error("API validation error:", err);
+        setError("Failed to connect to the server. Please try again.");
+      }
+    },
+    [redirectPath, router],
+  );
 
   useEffect(() => {
+    if (isDevMode) {
+      return;
+    }
+
     if (!hasSupabaseConfig) {
       setError("Missing Supabase environment variables");
       return;
@@ -48,31 +80,7 @@ export default function LoginContent() {
     return () => {
       data?.subscription?.unsubscribe();
     };
-  }, [router, redirectPath]);
-
-  const verifyAndRedirect = async (token: string) => {
-    try {
-      // Test if we can access the API with this token
-      const response = await fetch("/api/v1/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        // Only redirect if API access works
-        router.push(redirectPath);
-      } else {
-        // Session exists but API fails - clear the session and show error
-        console.error("API validation failed:", response.status);
-        await supabase?.auth.signOut();
-        setError("Failed to validate your account. Please try logging in again.");
-      }
-    } catch (err) {
-      console.error("API validation error:", err);
-      setError("Failed to connect to the server. Please try again.");
-    }
-  };
+  }, [isDevMode, verifyAndRedirect]);
 
   const handleDevLogin = async () => {
     setLoading(true);
@@ -130,6 +138,35 @@ export default function LoginContent() {
     }
   };
 
+  // In development mode, show only dev login options
+  if (isDevMode) {
+    return (
+      <div className="p-2xl">
+        <div className="card max-w-md">
+          <h1 className="page-title">School Management System</h1>
+          <p className="muted-text">Development Mode - Select a user to continue</p>
+
+          {error && <div className="error-box">{error}</div>}
+
+          <select
+            value={selectedDevUser}
+            onChange={(e) => setSelectedDevUser(e.target.value)}
+            className="w-full px-md py-sm border border-gray-300 rounded-md mb-md"
+          >
+            {DEV_USERS.map((user) => (
+              <option key={user.email} value={user.email}>
+                {user.name}
+              </option>
+            ))}
+          </select>
+          <button onClick={handleDevLogin} disabled={loading} className="btn btn-primary w-full">
+            {loading ? "Logging in..." : "Dev Login"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-2xl">
       <div className="card max-w-md">
@@ -145,24 +182,6 @@ export default function LoginContent() {
         >
           {loading ? "Signing in..." : "Sign in with Google"}
         </button>
-
-        <div className="border-t border-gray-200 my-md pt-md">
-          <p className="muted-text mb-sm text-sm">Development Mode</p>
-          <select
-            value={selectedDevUser}
-            onChange={(e) => setSelectedDevUser(e.target.value)}
-            className="w-full px-md py-sm border border-gray-300 rounded-md mb-sm"
-          >
-            {DEV_USERS.map((user) => (
-              <option key={user.email} value={user.email}>
-                {user.name}
-              </option>
-            ))}
-          </select>
-          <button onClick={handleDevLogin} disabled={loading} className="btn btn-secondary w-full">
-            {loading ? "Logging in..." : "Dev Login (bypass auth)"}
-          </button>
-        </div>
       </div>
     </div>
   );

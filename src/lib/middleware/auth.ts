@@ -8,7 +8,8 @@ const prisma = new PrismaClient();
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const hasSupabaseConfig = Boolean(supabaseUrl && supabaseServiceKey);
+const supabase = hasSupabaseConfig ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 export interface JWTPayload {
   sub: string;
@@ -28,6 +29,10 @@ export interface JWTPayload {
  * @returns Decoded JWT payload
  */
 export async function verifyJWT(token: string): Promise<JWTPayload> {
+  if (!supabase) {
+    throw new APIError("UNAUTHORIZED", "Authentication provider not configured");
+  }
+
   try {
     // Use Supabase's built-in getUser to verify the token
     const {
