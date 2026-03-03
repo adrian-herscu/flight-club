@@ -31,7 +31,7 @@ jobs:
           cache: npm
 
       - name: Validate lockfile and install deterministically
-        run: npm ci --prefer-offline --no-audit --fund=false
+        run: npm ci --prefer-offline --no-audit --fund=false --legacy-peer-deps
 
       - name: Ensure lockfile was not modified
         run: git diff --exit-code -- package-lock.json
