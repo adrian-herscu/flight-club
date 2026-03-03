@@ -82,10 +82,13 @@ jobs:
         run: npm test
 
       - name: Deploy to Vercel
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           npm install -g vercel
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+          else
+            vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
+          fi
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
