@@ -50,8 +50,9 @@ function isProcessRunning(pid) {
 
 async function killPort(port) {
   return new Promise((resolve) => {
-    // Try both regular and sudo lsof
-    const kill = spawn('sh', ['-c', `lsof -ti :${port} 2>/dev/null || sudo lsof -ti :${port} 2>/dev/null`]);
+    // Use netstat/ss to find PIDs listening on port
+    const findCmd = `ss -tlnp 2>/dev/null | grep :${port} | awk '{print $NF}' | grep -oP 'pid=\\K[0-9]+' || echo ''`;
+    const kill = spawn('sh', ['-c', findCmd]);
     let pids = '';
     
     kill.stdout.on('data', (data) => {
@@ -60,23 +61,27 @@ async function killPort(port) {
     
     kill.on('close', async (code) => {
       if (pids.trim()) {
-        const pidList = pids.trim().split('\n');
+        const pidList = pids.trim().split('\n').filter(p => p);
         for (const pid of pidList) {
           try {
             const pidNum = parseInt(pid);
-            process.kill(pidNum, 'SIGTERM');
-            console.log(`🛑 Killed process ${pid} on port ${port}`);
-          } catch (error) {
-            // Try with sudo if permission denied
-            try {
-              spawn('sudo', ['kill', '-9', pid], { stdio: 'inherit' });
-            } catch (e) {
-              // Ignore
+            if (!isNaN(pidNum) && pidNum > 0) {
+              process.kill(pidNum, 'SIGTERM');
+              console.log(`  Sent SIGTERM to process ${pid}`);
+              
+              // Wait a bit then force kill if still running
+              await new Promise(r => setTimeout(r, 500));
+              if (isProcessRunning(pidNum)) {
+                process.kill(pidNum, 'SIGKILL');
+                console.log(`  Force killed process ${pid}`);
+              }
             }
+          } catch (error) {
+            // Process might already be dead, ignore
           }
         }
         // Wait for processes to actually die
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 1000));
       }
       resolve();
     });
@@ -137,40 +142,32 @@ async function start() {
 async function stop() {
   const pid = loadPid();
   
-  if (!pid) {
-    console.log('ℹ️  No server PID file found');
-    // Try to kill any process on the port anyway
-    await killPort(PORT);
-    return;
-  }
-
-  if (!isProcessRunning(pid)) {
-    console.log(`ℹ️  Server process ${pid} not running`);
-    deletePidFile();
-    await killPort(PORT);
-    return;
-  }
-
-  console.log(`🛑 Stopping server (PID: ${pid})...`);
+  console.log(`🛑 Stopping dev server...`);
   
-  try {
-    process.kill(pid, 'SIGTERM');
-    
-    // Wait a bit for graceful shutdown
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (isProcessRunning(pid)) {
-      console.log('   Forcing shutdown...');
-      process.kill(pid, 'SIGKILL');
+  if (pid && isProcessRunning(pid)) {
+    console.log(`   Stopping PID ${pid}...`);
+    try {
+      process.kill(pid, 'SIGTERM');
+      
+      // Wait a bit for graceful shutdown
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (isProcessRunning(pid)) {
+        console.log(`   Force killing PID ${pid}...`);
+        process.kill(pid, 'SIGKILL');
+      }
+    } catch (error) {
+      // Process might already be dead
     }
-    
-    console.log('✅ Server stopped');
-  } catch (error) {
-    console.error('❌ Error stopping server:', error.message);
   }
   
   deletePidFile();
+  
+  // Always try to kill any process on the port (might be orphaned)
+  console.log(`   Checking for processes on port ${PORT}...`);
   await killPort(PORT);
+  
+  console.log('✅ Server stopped');
 }
 
 async function restart() {
