@@ -6,6 +6,29 @@ import { spawn, exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
+async function killProcessOnPort(port: number = 3000): Promise<void> {
+  try {
+    // Try to find and kill process on the port
+    const { stdout } = await execAsync(`lsof -ti:${port}`);
+    const pids = stdout.trim().split('\n').filter(Boolean);
+    
+    if (pids.length > 0) {
+      console.log(`🔪 Killing ${pids.length} process(es) on port ${port}...`);
+      for (const pid of pids) {
+        try {
+          await execAsync(`kill -9 ${pid}`);
+        } catch {
+          // Process might have already died
+        }
+      }
+      // Wait a bit for port to be released
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  } catch {
+    // No process found on port, which is fine
+  }
+}
+
 
 let serverProcess: any = null;
 let serverStarted = false;
@@ -67,6 +90,9 @@ export async function startDevServer() {
     }, 45000);
   });
 }
+
+  // Kill any zombie processes on port 3000
+  await killProcessOnPort(3000);
 
 export async function stopDevServer() {
   if (!serverProcess || !serverStarted) {
