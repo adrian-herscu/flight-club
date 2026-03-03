@@ -24,6 +24,7 @@ jobs:
       DIRECT_URL: "postgresql://test:test@localhost:5432/test_db"
       NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co"
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key"
+      NEXT_PUBLIC_API_URL: "http://localhost:3000"
       SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key"
       SUPABASE_JWT_SECRET: "test-jwt-secret"
       NODE_ENV: "development"
