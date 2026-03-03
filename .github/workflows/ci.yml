@@ -55,11 +55,17 @@ jobs:
           node-version: "20"
           cache: npm
 
+      - name: Check lockfile is in sync with package.json
+        run: |
+          npm install --dry-run --package-lock-only 2>&1 | tee /tmp/npm-check.log
+          if grep -q "added\|removed\|changed" /tmp/npm-check.log; then
+            echo "Error: package-lock.json is out of sync with package.json"
+            echo "Run 'npm install' locally and commit the updated package-lock.json"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --fund=false --legacy-peer-deps
-
-      - name: Verify lockfile was not modified
-        run: git diff --exit-code -- package-lock.json
 
       - name: Run lint
         run: npm run lint
