@@ -62,8 +62,7 @@ export default function LoginContent() {
 
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
-        const isSecure =
-          typeof window !== "undefined" && window.location.protocol === "https:";
+        const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
         document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; samesite=lax${isSecure ? "; secure" : ""}`;
 
         // Verify user can access API before redirecting

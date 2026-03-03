@@ -56,8 +56,7 @@ export default function AuthCallbackContent() {
 
         // Persist a backend-readable auth cookie for API routes
         if (accessToken) {
-          const isSecure =
-            typeof window !== "undefined" && window.location.protocol === "https:";
+          const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
           document.cookie = `sb-access-token=${accessToken}; path=/; max-age=3600; samesite=lax${isSecure ? "; secure" : ""}`;
         }
 
