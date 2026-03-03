@@ -58,7 +58,7 @@ export default function LoginContent() {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (response.ok) {
         // Only redirect if API access works
         router.push(redirectPath);

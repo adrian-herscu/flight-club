@@ -49,8 +49,8 @@ export default function AuthCallbackContent() {
         }
 
         // Small delay to ensure session is fully persisted
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         router.replace(redirectPath);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to complete sign-in");

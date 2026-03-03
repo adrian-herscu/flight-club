@@ -7,7 +7,11 @@ import type { UserMe } from "@/services/types";
 export default function HomePage() {
   const { data: user, loading, error } = useApiData<UserMe>("/api/v1/me");
 
-  const isAuthError = error && (error.includes("authentication") || error.includes("Invalid token") || error.includes("UNAUTHORIZED"));
+  const isAuthError =
+    error &&
+    (error.includes("authentication") ||
+      error.includes("Invalid token") ||
+      error.includes("UNAUTHORIZED"));
 
   if (loading) {
     return <div>Loading...</div>;
