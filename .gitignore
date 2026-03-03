@@ -26,3 +26,5 @@ htmlcov/
 *.dylib
 scripts/.dev-server.pid
 .vercel
+playwright-report/*
+test-results/*
