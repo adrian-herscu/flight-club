@@ -30,10 +30,16 @@ export interface JWTPayload {
  */
 export async function verifyJWT(token: string): Promise<JWTPayload> {
   if (!supabase) {
+    console.error("[AUTH] Supabase client not configured", {
+      hasUrl: Boolean(supabaseUrl),
+      hasKey: Boolean(supabaseServiceKey),
+    });
     throw new APIError("UNAUTHORIZED", "Authentication provider not configured");
   }
 
   try {
+    console.log("[AUTH] Verifying JWT token", { tokenPreview: token.substring(0, 20) + "..." });
+
     // Use Supabase's built-in getUser to verify the token
     const {
       data: { user },
@@ -41,8 +47,14 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
     } = await supabase.auth.getUser(token);
 
     if (error || !user) {
+      console.error("[AUTH] JWT verification failed", {
+        error: error?.message,
+        hasUser: Boolean(user),
+      });
       throw new Error(error?.message || "User not found");
     }
+
+    console.log("[AUTH] JWT verified successfully", { userId: user.id, email: user.email });
 
     // Convert Supabase user to our JWTPayload format
     return {
@@ -54,8 +66,10 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
       user_metadata: user.user_metadata,
     };
   } catch (error: any) {
-    console.error("❌ JWT verification failed:", error.message);
-    console.error("Token preview:", token.substring(0, 50) + "...");
+    console.error("[AUTH] JWT verification exception", {
+      error: error.message,
+      tokenPreview: token.substring(0, 50) + "...",
+    });
     throw new APIError("UNAUTHORIZED", "Invalid or expired token");
   }
 }
@@ -67,7 +81,13 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
  * @returns User object
  */
 export async function getCurrentUser(authHeader: string): Promise<User> {
+  console.log("[AUTH] getCurrentUser called", {
+    hasAuthHeader: Boolean(authHeader),
+    nodeEnv: process.env.NODE_ENV,
+  });
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("[AUTH] Missing or invalid authorization header");
     throw new APIError("UNAUTHORIZED", "Not authenticated");
   }
 
@@ -75,6 +95,7 @@ export async function getCurrentUser(authHeader: string): Promise<User> {
 
   // DEV MODE: Allow bypass for local development
   if (token === "dev-mode-local-testing-token" && process.env.NODE_ENV === "development") {
+    console.log("[AUTH] Using dev mode bypass");
     // Return or create a dev user
     let user = await prisma.user.findUnique({
       where: { email: "dev@local.com" },
@@ -103,9 +124,12 @@ export async function getCurrentUser(authHeader: string): Promise<User> {
     return user;
   }
 
+  console.log("[AUTH] Verifying JWT for production user");
   const payload = await verifyJWT(token);
 
+  console.log("[AUTH] Syncing user from token", { email: payload.email, sub: payload.sub });
   const user = await syncUserFromToken(payload);
+  console.log("[AUTH] User synced successfully", { userId: user.id, email: user.email });
   return user;
 }
 
@@ -121,14 +145,18 @@ async function syncUserFromToken(payload: JWTPayload): Promise<User> {
   const authProviderId = payload.sub;
   const name = payload.name || null;
 
+  console.log("[AUTH] syncUserFromToken", { email, authProviderId, name });
+
   // Find or create user
   let user = await prisma.user.findUnique({
     where: { email },
   });
 
   const isNewUser = !user;
+  console.log("[AUTH] User lookup result", { email, exists: Boolean(user), isNewUser });
 
   if (!user) {
+    console.log("[AUTH] Creating new user", { email, authProviderId });
     // Create new user
     user = await prisma.user.create({
       data: {
@@ -138,6 +166,7 @@ async function syncUserFromToken(payload: JWTPayload): Promise<User> {
         authProviderId,
       },
     });
+    console.log("[AUTH] User created", { userId: user.id, email: user.email });
   } else {
     // Update existing user if name changed
     if (name && user.name !== name) {
@@ -150,14 +179,24 @@ async function syncUserFromToken(payload: JWTPayload): Promise<User> {
 
   // Auto-assign STUDENT role to new users (unless they're already a super-admin)
   if (isNewUser) {
+    console.log("[AUTH] Checking roles for new user", { userId: user.id });
     const existingRoles = await prisma.userRole.findMany({
       where: { userId: user.id },
+    });
+
+    console.log("[AUTH] Existing roles count", {
+      userId: user.id,
+      rolesCount: existingRoles.length,
     });
 
     // Only auto-assign STUDENT role if user has no roles yet
     if (existingRoles.length === 0) {
       // Get the first school to assign them to (demo purposes)
       const firstSchool = await prisma.school.findFirst();
+      console.log("[AUTH] First school lookup", {
+        hasSchool: Boolean(firstSchool),
+        schoolId: firstSchool?.id,
+      });
 
       if (firstSchool) {
         await prisma.userRole.create({
@@ -167,10 +206,17 @@ async function syncUserFromToken(payload: JWTPayload): Promise<User> {
             roleType: "STUDENT",
           },
         });
-        console.log(`✅ Auto-assigned STUDENT role to new user: ${email}`);
+        console.log("[AUTH] Auto-assigned STUDENT role", {
+          userId: user.id,
+          email,
+          schoolId: firstSchool.id,
+        });
+      } else {
+        console.warn("[AUTH] No school found for auto-assignment", { userId: user.id, email });
       }
     }
   }
 
+  console.log("[AUTH] User sync completed", { userId: user.id, email: user.email });
   return user;
 }
