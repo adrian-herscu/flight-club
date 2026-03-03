@@ -37,6 +37,7 @@ export default function LoginContent() {
           // Session exists but API fails - clear the session and show error
           console.error("API validation failed:", response.status);
           await supabase?.auth.signOut();
+          document.cookie = "sb-access-token=; path=/; max-age=0; samesite=lax";
           setError("Failed to validate your account. Please try logging in again.");
         }
       } catch (err) {
@@ -61,6 +62,10 @@ export default function LoginContent() {
 
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
+        const isSecure =
+          typeof window !== "undefined" && window.location.protocol === "https:";
+        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; samesite=lax${isSecure ? "; secure" : ""}`;
+
         // Verify user can access API before redirecting
         await verifyAndRedirect(session.access_token);
       }

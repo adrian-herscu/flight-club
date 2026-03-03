@@ -28,6 +28,8 @@ export default function AuthCallbackContent() {
       if (!supabase) return;
 
       try {
+        let accessToken: string | null = null;
+
         if (code) {
           // Exchange the code for a session - Supabase automatically handles cookies
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -39,6 +41,8 @@ export default function AuthCallbackContent() {
             setError("Failed to establish session");
             return;
           }
+
+          accessToken = data.session.access_token;
         } else {
           // Verify we have an existing session
           const { data } = await supabase.auth.getSession();
@@ -46,6 +50,15 @@ export default function AuthCallbackContent() {
             setError("No active session found");
             return;
           }
+
+          accessToken = data.session.access_token;
+        }
+
+        // Persist a backend-readable auth cookie for API routes
+        if (accessToken) {
+          const isSecure =
+            typeof window !== "undefined" && window.location.protocol === "https:";
+          document.cookie = `sb-access-token=${accessToken}; path=/; max-age=3600; samesite=lax${isSecure ? "; secure" : ""}`;
         }
 
         // Small delay to ensure session is fully persisted

@@ -18,6 +18,7 @@
     "test:contract": "vitest --run src/tests/contract",
     "test:e2e": "node scripts/run-e2e.js",
     "test:e2e:only": "vitest --run e2e",
+    "test:e2e:preview": "playwright test tests/e2e/preview-deployment.spec.ts",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
     "migrate": "prisma migrate deploy",

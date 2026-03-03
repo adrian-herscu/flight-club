@@ -30,6 +30,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       } else if (hasSupabaseConfig) {
         // Use Supabase's session which handles cookies automatically
         token = await getAuthToken();
+
+        // Fallback: read backend-compatible cookie token (set after OAuth callback)
+        if (!token && typeof document !== "undefined") {
+          const match = document.cookie
+            .split(";")
+            .map((part) => part.trim())
+            .find((entry) => entry.startsWith("sb-access-token="));
+
+          if (match) {
+            token = decodeURIComponent(match.substring("sb-access-token=".length));
+          }
+        }
       }
 
       const headers: Record<string, string> = {
