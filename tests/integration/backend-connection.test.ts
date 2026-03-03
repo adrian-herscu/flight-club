@@ -105,7 +105,9 @@ describe("Frontend-Backend Integration", () => {
     let errorMessage = "";
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/nonexistent`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/nonexistent`, {
+        signal: AbortSignal.timeout(3000),
+      });
 
       if (!response.ok) {
         errorMessage = "Backend returned error";
@@ -132,7 +134,9 @@ describe("Frontend-Backend Integration", () => {
     // Start dev server: npm run dev
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/health`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/health`, {
+        signal: AbortSignal.timeout(3000),
+      });
 
       if (response.ok) {
         const data = await response.json();
