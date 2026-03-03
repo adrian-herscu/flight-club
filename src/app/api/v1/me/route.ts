@@ -1,4 +1,8 @@
 import { failure, success } from "../_lib/response";
+import { getCurrentUser } from "@/lib/middleware/auth";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 function extractToken(request: Request): string | null {
   // Try Authorization header first (Bearer token)
@@ -48,6 +52,23 @@ export async function GET(request: Request) {
     });
   }
 
-  // In production, would validate the JWT token with Supabase/Auth provider
-  return failure("AUTHENTICATION_REQUIRED", "Invalid token", 401);
+  try {
+    const user = await getCurrentUser(`Bearer ${token}`);
+
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId: user.id },
+      select: { roleType: true },
+    });
+
+    const roles = userRoles.map((r) => r.roleType.toLowerCase());
+
+    return success({
+      id: user.id,
+      email: user.email,
+      name: user.name || undefined,
+      roles,
+    });
+  } catch {
+    return failure("AUTHENTICATION_REQUIRED", "Invalid token", 401);
+  }
 }
