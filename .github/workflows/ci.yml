@@ -9,6 +9,8 @@ on:
 permissions:
   contents: read
   deployments: write
+  issues: write
+  pull-requests: write
   statuses: write
 
 concurrency:
@@ -17,7 +19,7 @@ concurrency:
 
 jobs:
   ci:
-    name: Lockfile → Lint → Test
+    name: Lockfile → Lint → Test → Deploy
     runs-on: ubuntu-latest
 
     env:
