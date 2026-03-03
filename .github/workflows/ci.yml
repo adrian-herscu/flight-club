@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  deployments: write
+  statuses: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -82,13 +84,10 @@ jobs:
         run: npm test
 
       - name: Deploy to Vercel
-        run: |
-          npm install -g vercel
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
-          else
-            vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
-          fi
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
