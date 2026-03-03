@@ -29,7 +29,8 @@ export default function LoginContent() {
 
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
-        router.push(redirectPath);
+        // Verify user can access API before redirecting
+        await verifyAndRedirect(session.access_token);
       }
     });
 
@@ -37,7 +38,8 @@ export default function LoginContent() {
       if (supabase) {
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {
-          router.push(redirectPath);
+          // Verify user can access API before redirecting
+          await verifyAndRedirect(sessionData.session.access_token);
         }
       }
     };
@@ -47,6 +49,30 @@ export default function LoginContent() {
       data?.subscription?.unsubscribe();
     };
   }, [router, redirectPath]);
+
+  const verifyAndRedirect = async (token: string) => {
+    try {
+      // Test if we can access the API with this token
+      const response = await fetch("/api/v1/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        // Only redirect if API access works
+        router.push(redirectPath);
+      } else {
+        // Session exists but API fails - clear the session and show error
+        console.error("API validation failed:", response.status);
+        await supabase?.auth.signOut();
+        setError("Failed to validate your account. Please try logging in again.");
+      }
+    } catch (err) {
+      console.error("API validation error:", err);
+      setError("Failed to connect to the server. Please try again.");
+    }
+  };
 
   const handleDevLogin = async () => {
     setLoading(true);
