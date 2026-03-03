@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build -- --no-lint",
-  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ]; then exit 1; fi; if [ \"$VERCEL_GIT_COMMIT_REF\" = \"develop\" ]; then exit 1; fi; if [ -n \"$VERCEL_GIT_PULL_REQUEST_ID\" ]; then exit 1; fi; exit 0",
+  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ]; then exit 1; fi; if [ -z \"$VERCEL_GIT_PULL_REQUEST_ID\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]; then exit 0; fi; exit 1",
   "devCommand": "npm run dev",
   "installCommand": "npm ci --prefer-offline --no-audit --fund=false",
   "framework": "nextjs",
