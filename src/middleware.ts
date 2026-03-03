@@ -11,16 +11,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for auth token in cookies
-  const token = request.cookies.get("sb-access-token");
-
-  // Redirect to login if no token
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
+  // Allow all authenticated paths to proceed
+  // Auth verification happens in API routes via JWT tokens
+  // The client-side handles redirects to /login when needed
   return NextResponse.next();
 }
 

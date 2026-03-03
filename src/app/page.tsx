@@ -3,11 +3,21 @@
 import { useApiData } from "@/lib/hooks/useApiData";
 import { ApiError } from "@/services/apiClient";
 import type { UserMe } from "@/services/types";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function HomePage() {
   const { data: user, loading, error } = useApiData<UserMe>("/api/v1/me");
+  const router = useRouter();
 
-  const isAuthError = error && error.includes("authentication");
+  const isAuthError = error && (error.includes("authentication") || error.includes("Invalid token") || error.includes("UNAUTHORIZED"));
+
+  useEffect(() => {
+    if (isAuthError) {
+      // Redirect to login if not authenticated
+      router.push("/login?redirect=/");
+    }
+  }, [isAuthError, router]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -16,19 +26,7 @@ export default function HomePage() {
   if (isAuthError) {
     return (
       <div className="p-2xl">
-        <h1>Welcome to School Management System</h1>
-        <div className="error-box">
-          <p>
-            Please{" "}
-            <a href="/login" className="link-primary">
-              log in
-            </a>{" "}
-            to access your account.
-          </p>
-        </div>
-        <div className="mt-2xl">
-          <p>Use the navigation menu to access different sections based on your role.</p>
-        </div>
+        <div>Redirecting to login...</div>
       </div>
     );
   }

@@ -21,19 +21,14 @@ export class ApiError extends Error {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return pRetry(
     async () => {
-      // Try to get token from cookie first (works for both dev and Google auth)
+      // Get token from Supabase session (automatically managed via cookies/localStorage)
       let token: string | null = null;
 
-      if (typeof document !== "undefined") {
-        token =
-          document.cookie
-            .split("; ")
-            .find((c) => c.startsWith("sb-access-token="))
-            ?.split("=")[1] || null;
-      }
-
-      // Fallback to Supabase session if cookie not found
-      if (!token && hasSupabaseConfig) {
+      // In dev mode, check for dev token first
+      if (typeof document !== "undefined" && localStorage.getItem("dev-mode") === "true") {
+        token = "dev-mode-local-testing-token";
+      } else if (hasSupabaseConfig) {
+        // Use Supabase's session which handles cookies automatically
         token = await getAuthToken();
       }
 

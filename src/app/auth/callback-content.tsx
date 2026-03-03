@@ -29,24 +29,28 @@ export default function AuthCallbackContent() {
 
       try {
         if (code) {
+          // Exchange the code for a session - Supabase automatically handles cookies
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
 
-          if (data.session?.access_token) {
-            document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
-          }
-        } else {
-          const { data } = await supabase.auth.getSession();
+          // Supabase stores the session in localStorage and cookies automatically
+          // No need to manually set cookies - just verify we have a session
           if (!data.session) {
-            setError("Missing OAuth code");
+            setError("Failed to establish session");
             return;
           }
-
-          if (data.session?.access_token) {
-            document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
+        } else {
+          // Verify we have an existing session
+          const { data } = await supabase.auth.getSession();
+          if (!data.session) {
+            setError("No active session found");
+            return;
           }
         }
 
+        // Small delay to ensure session is fully persisted
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         router.replace(redirectPath);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to complete sign-in");
