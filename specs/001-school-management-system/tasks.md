@@ -19,7 +19,6 @@ All test tasks are marked [P] to indicate parallelization with corresponding imp
 - [x] T001 Create backend dependency files (now unified at root: package.json, package-lock.json)
 - [x] T002 Create frontend project configuration (now unified at root: next.config.js, tsconfig.json)
 - [x] T003 [P] Configure linting/formatting in root tsconfig.json, .eslintrc.cjs, .prettierrc (unified)
-- [x] T004 [P] Add environment templates in root .env.local.example (unified)
 - [x] T005 [P] Add project automation targets in package.json npm scripts (test, lint, build, migrate, seed)
 
 ---

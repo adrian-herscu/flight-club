@@ -128,7 +128,7 @@ Always move client-only UI into a Client Component and import it directly in you
 
 - **TypeScript:** Use TypeScript for all code. Enable `strict` mode in `tsconfig.json`.
 - **ESLint & Prettier:** Enforce code style and linting. Use the official Next.js ESLint config. In Next.js 16, prefer running ESLint via the ESLint CLI (not `next lint`).
-- **Environment Variables:** Store secrets in `.env.local`. Never commit secrets to version control.
+- **Environment Variables:** Store local environment configuration in `.env`.
   - In Next.js 16, `serverRuntimeConfig` / `publicRuntimeConfig` are removed. Use environment variables instead.
   - `NEXT_PUBLIC_` variables are **inlined at build time** (changing them after build won’t affect a deployed build).
   - If you truly need runtime evaluation of env in a dynamic context, follow Next.js guidance (e.g., call `connection()` before reading `process.env`).

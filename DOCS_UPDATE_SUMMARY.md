@@ -76,7 +76,7 @@ Comprehensive guide covering:
 - ✅ Create Supabase cloud project
 - ✅ Set up Google Cloud OAuth 2.0 credentials
 - ✅ Configure Supabase Google provider
-- ✅ Environment variables setup (`.env.local`)
+- ✅ Environment variables setup (`.env`)
 - ✅ Database migration and seeding
 - ✅ Testing authentication locally
 - ✅ Production deployment considerations
@@ -87,7 +87,7 @@ Comprehensive guide covering:
 - **Part 1**: Create Supabase project
 - **Part 2**: Set up Google OAuth credentials
 - **Part 3**: Configure Supabase Google provider
-- **Part 4**: Configure project environment (`.env.local`)
+- **Part 4**: Configure project environment (`.env`)
 - **Part 5**: Deploy migrations & seed data
 - **Part 6**: Test authentication
 - **Part 7**: Production deployment
@@ -192,7 +192,7 @@ Quick reference (full details in `AUTH_SETUP.md`):
    - Paste Client ID and Secret
    - Save
 
-3. **Project `.env.local`**:
+3. **Project `.env`**:
    - Add `NEXT_PUBLIC_SUPABASE_URL`
    - Add `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - Add `SUPABASE_JWT_SECRET`

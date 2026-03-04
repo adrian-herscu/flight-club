@@ -11,7 +11,7 @@
 During local development, **do not restart the dev server after each code change**.
 
 Restart the server **only when required**, such as:
-- environment variable changes (`.env.local`, runtime env injection)
+- environment variable changes (`.env`, runtime env injection)
 - port/process conflicts (`EADDRINUSE`)
 - stale runtime state that cannot be recovered with hot reload
 

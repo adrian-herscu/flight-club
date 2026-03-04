@@ -63,23 +63,6 @@ npm run seed  # (if seed script exists)
 
 ### Quick Setup (Existing Google Credentials)
 
-Create `.env.local` in the project root:
-
-```dotenv
-# Supabase Cloud Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://iybjgpzqmgxeopywkzkz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cPSqn0JW_g21z_tvDQn98Q_2SrLFm_u
-
-# Database Connection (for Prisma)
-# Special characters must be URL-encoded: > = %3E, * = %2A, ] = %5D
-DATABASE_URL="postgresql://postgres:PASSWORD%3Eyt6R%2A%5DVx_s@db.iybjgpzqmgxeopywkzkz.supabase.co:5432/postgres"
-
-# JWT Secret (for backend token verification)
-SUPABASE_JWT_SECRET="+/6y78gtHHU34PS9gqPlf4aP6ueXiY3hsUwKhF14//rqR4v7v+jW3NbaK/rVee0fG0ebkVNyWBC41tttamhgBA=="
-
-# API Base URL
-NEXT_PUBLIC_API_URL=http://localhost:3000
-```
 
 **First-time setup?** See **[AUTH_SETUP.md](../../AUTH_SETUP.md)** for:
 1. Creating a Supabase project

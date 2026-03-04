@@ -36,9 +36,6 @@ This includes:
 npm install
 npx prisma generate
 
-# Configure environment variables
-cp .env.local.example .env.local
-# Edit .env.local with Supabase credentials (see AUTH_SETUP.md Section 4.2)
 
 # Deploy migrations to cloud database
 export DATABASE_URL="postgresql://..."  # URL-encoded password
