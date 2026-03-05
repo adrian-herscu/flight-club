@@ -23,6 +23,7 @@
     "test:watch": "vitest --watch",
     "migrate": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
+    "migrate:reset": "prisma migrate reset --force",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts"
