@@ -22,7 +22,12 @@ function extractToken(request: Request): string | null {
 }
 
 export async function GET(request: Request) {
-  console.log("[/api/v1/me] Request received");
+  console.log("[/api/v1/me] Request received", {
+    nodeEnv: process.env.NODE_ENV,
+    databaseUrl: process.env.DATABASE_URL ? "SET" : "MISSING",
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "MISSING",
+    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? "SET" : "MISSING",
+  });
 
   // Require valid authentication token
   const token = extractToken(request);
@@ -84,7 +89,11 @@ export async function GET(request: Request) {
       roles,
     });
   } catch (error: any) {
-    console.error("[/api/v1/me] Authentication failed", { error: error.message, code: error.code });
-    return failure("AUTHENTICATION_REQUIRED", "Invalid token", 401);
+    console.error("[/api/v1/me] Authentication failed", {
+      error: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+    return failure("AUTHENTICATION_REQUIRED", error.message || "Invalid token", 401);
   }
 }

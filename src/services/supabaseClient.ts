@@ -5,6 +5,20 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
+if (typeof window !== "undefined") {
+  console.log("[Supabase Client] Browser environment:", {
+    NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ? supabaseUrl.substring(0, 30) + "..." : "MISSING",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey ? "SET" : "MISSING",
+    hasSupabaseConfig,
+  });
+} else {
+  console.log("[Supabase Client] Server environment:", {
+    NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ? supabaseUrl.substring(0, 30) + "..." : "MISSING",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey ? "SET" : "MISSING",
+    hasSupabaseConfig,
+  });
+}
+
 export const supabase = hasSupabaseConfig ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 /**

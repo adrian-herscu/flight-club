@@ -8,8 +8,17 @@ const prisma = new PrismaClient();
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const databaseUrl = process.env.DATABASE_URL || "";
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseServiceKey);
 const supabase = hasSupabaseConfig ? createClient(supabaseUrl, supabaseServiceKey) : null;
+
+console.log("[AUTH CONFIG] Environment variables on startup:", {
+  NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ? "SET (" + supabaseUrl.substring(0, 30) + "...)" : "MISSING",
+  SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey ? "SET" : "MISSING",
+  DATABASE_URL: databaseUrl ? "SET (" + databaseUrl.substring(0, 30) + "...)" : "MISSING",
+  NODE_ENV: process.env.NODE_ENV,
+  hasSupabaseConfig,
+});
 
 export interface JWTPayload {
   sub: string;
@@ -147,76 +156,86 @@ async function syncUserFromToken(payload: JWTPayload): Promise<User> {
 
   console.log("[AUTH] syncUserFromToken", { email, authProviderId, name });
 
-  // Find or create user
-  let user = await prisma.user.findUnique({
-    where: { email },
-  });
-
-  const isNewUser = !user;
-  console.log("[AUTH] User lookup result", { email, exists: Boolean(user), isNewUser });
-
-  if (!user) {
-    console.log("[AUTH] Creating new user", { email, authProviderId });
-    // Create new user
-    user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        authProvider: "google",
-        authProviderId,
-      },
-    });
-    console.log("[AUTH] User created", { userId: user.id, email: user.email });
-  } else {
-    // Update existing user if name changed
-    if (name && user.name !== name) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { name },
-      });
-    }
-  }
-
-  // Auto-assign STUDENT role to new users (unless they're already a super-admin)
-  if (isNewUser) {
-    console.log("[AUTH] Checking roles for new user", { userId: user.id });
-    const existingRoles = await prisma.userRole.findMany({
-      where: { userId: user.id },
+  try {
+    // Find or create user
+    let user = await prisma.user.findUnique({
+      where: { email },
     });
 
-    console.log("[AUTH] Existing roles count", {
-      userId: user.id,
-      rolesCount: existingRoles.length,
-    });
+    const isNewUser = !user;
+    console.log("[AUTH] User lookup result", { email, exists: Boolean(user), isNewUser });
 
-    // Only auto-assign STUDENT role if user has no roles yet
-    if (existingRoles.length === 0) {
-      // Get the first school to assign them to (demo purposes)
-      const firstSchool = await prisma.school.findFirst();
-      console.log("[AUTH] First school lookup", {
-        hasSchool: Boolean(firstSchool),
-        schoolId: firstSchool?.id,
-      });
-
-      if (firstSchool) {
-        await prisma.userRole.create({
-          data: {
-            userId: user.id,
-            schoolId: firstSchool.id,
-            roleType: "STUDENT",
-          },
-        });
-        console.log("[AUTH] Auto-assigned STUDENT role", {
-          userId: user.id,
+    if (!user) {
+      console.log("[AUTH] Creating new user", { email, authProviderId });
+      // Create new user
+      user = await prisma.user.create({
+        data: {
           email,
-          schoolId: firstSchool.id,
+          name,
+          authProvider: "google",
+          authProviderId,
+        },
+      });
+      console.log("[AUTH] User created", { userId: user.id, email: user.email });
+    } else {
+      // Update existing user if name changed
+      if (name && user.name !== name) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { name },
         });
-      } else {
-        console.warn("[AUTH] No school found for auto-assignment", { userId: user.id, email });
       }
     }
-  }
 
-  console.log("[AUTH] User sync completed", { userId: user.id, email: user.email });
-  return user;
+    // Auto-assign STUDENT role to new users (unless they're already a super-admin)
+    if (isNewUser) {
+      console.log("[AUTH] Checking roles for new user", { userId: user.id });
+      const existingRoles = await prisma.userRole.findMany({
+        where: { userId: user.id },
+      });
+
+      console.log("[AUTH] Existing roles count", {
+        userId: user.id,
+        rolesCount: existingRoles.length,
+      });
+
+      // Only auto-assign STUDENT role if user has no roles yet
+      if (existingRoles.length === 0) {
+        // Get the first school to assign them to (demo purposes)
+        const firstSchool = await prisma.school.findFirst();
+        console.log("[AUTH] First school lookup", {
+          hasSchool: Boolean(firstSchool),
+          schoolId: firstSchool?.id,
+        });
+
+        if (firstSchool) {
+          await prisma.userRole.create({
+            data: {
+              userId: user.id,
+              schoolId: firstSchool.id,
+              roleType: "STUDENT",
+            },
+          });
+          console.log("[AUTH] Auto-assigned STUDENT role", {
+            userId: user.id,
+            email,
+            schoolId: firstSchool.id,
+          });
+        } else {
+          console.warn("[AUTH] No school found for auto-assignment", { userId: user.id, email });
+        }
+      }
+    }
+
+    console.log("[AUTH] User sync completed", { userId: user.id, email: user.email });
+    return user;
+  } catch (dbError: any) {
+    console.error("[AUTH] Database sync error", {
+      email,
+      error: dbError.message,
+      code: dbError.code,
+      sqlMessage: dbError.meta?.message,
+    });
+    throw dbError;
+  }
 }

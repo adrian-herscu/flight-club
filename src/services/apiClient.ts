@@ -64,10 +64,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         if (devUserRole) headers["X-Dev-User-Role"] = devUserRole;
       }
 
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers,
+      const url = `${API_BASE_URL}${path}`;
+      console.log("[API Debug]", {
+        url,
+        method: options.method || "GET",
+        hasToken: !!token,
+        hasSupabaseConfig,
+        headers: Object.keys(headers),
       });
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers,
+        });
+      } catch (fetchError) {
+        console.error("[API Error] Fetch failed:", {
+          url,
+          error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+        });
+        throw new Error(
+          `Network error: ${fetchError instanceof Error ? fetchError.message : "Failed to fetch resource"}`,
+        );
+      }
 
       const requestId = response.headers.get("X-Request-ID") || undefined;
 
@@ -78,6 +98,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         } catch {
           // ignore JSON parse errors and fall back to generic error below
         }
+
+        console.error("[API Error] Response error:", {
+          url,
+          status: response.status,
+          code: errorData?.error?.code,
+          message: errorData?.error?.message,
+        });
 
         const error = new ApiError(
           errorData?.error?.code || "UNKNOWN_ERROR",
