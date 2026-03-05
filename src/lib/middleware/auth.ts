@@ -13,9 +13,9 @@ const hasSupabaseConfig = Boolean(supabaseUrl && supabaseServiceKey);
 const supabase = hasSupabaseConfig ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 console.log("[AUTH CONFIG] Environment variables on startup:", {
-  NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ? "SET (" + supabaseUrl.substring(0, 30) + "...)" : "MISSING",
+  NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ? "SET (" + supabaseUrl + ")" : "MISSING",
   SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey ? "SET" : "MISSING",
-  DATABASE_URL: databaseUrl ? "SET (" + databaseUrl.substring(0, 30) + "...)" : "MISSING",
+  DATABASE_URL: databaseUrl ? "SET (" + databaseUrl + ")" : "MISSING",
   NODE_ENV: process.env.NODE_ENV,
   hasSupabaseConfig,
 });
@@ -47,7 +47,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
   }
 
   try {
-    console.log("[AUTH] Verifying JWT token", { tokenPreview: token.substring(0, 20) + "..." });
+    console.log("[AUTH] Verifying JWT token", { tokenPreview: token });
 
     // Use Supabase's built-in getUser to verify the token
     const {
@@ -77,7 +77,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
   } catch (error: any) {
     console.error("[AUTH] JWT verification exception", {
       error: error.message,
-      tokenPreview: token.substring(0, 50) + "...",
+      tokenPreview: token,
     });
     throw new APIError("UNAUTHORIZED", "Invalid or expired token");
   }

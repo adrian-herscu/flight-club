@@ -71,7 +71,7 @@ export default function AuthCallbackContent() {
           document.cookie = `sb-access-token=${accessToken}; path=/; max-age=3600; samesite=lax${isSecure ? "; secure" : ""}`;
           console.log("[AUTH-CALLBACK] Set auth cookie", {
             isSecure,
-            tokenPreview: accessToken.substring(0, 20) + "...",
+            tokenPreview: accessToken,
           });
         }
 

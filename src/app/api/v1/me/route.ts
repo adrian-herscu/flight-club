@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   }
 
   console.log("[/api/v1/me] Token extracted", {
-    tokenPreview: token.substring(0, 20) + "...",
+    tokenPreview: token,
     nodeEnv: process.env.NODE_ENV,
   });
 
