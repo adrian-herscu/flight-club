@@ -21,20 +21,27 @@ export class ApiError extends Error {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return pRetry(
     async () => {
-      // Try to get token from cookie first (works for both dev and Google auth)
+      // Get token from Supabase session (automatically managed via cookies/localStorage)
       let token: string | null = null;
 
-      if (typeof document !== "undefined") {
-        token =
-          document.cookie
-            .split("; ")
-            .find((c) => c.startsWith("sb-access-token="))
-            ?.split("=")[1] || null;
-      }
-
-      // Fallback to Supabase session if cookie not found
-      if (!token && hasSupabaseConfig) {
+      // In dev mode, check for dev token first
+      if (typeof document !== "undefined" && localStorage.getItem("dev-mode") === "true") {
+        token = "dev-mode-local-testing-token";
+      } else if (hasSupabaseConfig) {
+        // Use Supabase's session which handles cookies automatically
         token = await getAuthToken();
+
+        // Fallback: read backend-compatible cookie token (set after OAuth callback)
+        if (!token && typeof document !== "undefined") {
+          const match = document.cookie
+            .split(";")
+            .map((part) => part.trim())
+            .find((entry) => entry.startsWith("sb-access-token="));
+
+          if (match) {
+            token = decodeURIComponent(match.substring("sb-access-token=".length));
+          }
+        }
       }
 
       const headers: Record<string, string> = {
@@ -57,10 +64,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         if (devUserRole) headers["X-Dev-User-Role"] = devUserRole;
       }
 
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers,
+      const url = `${API_BASE_URL}${path}`;
+      console.log("[API Debug]", {
+        url,
+        method: options.method || "GET",
+        hasToken: !!token,
+        hasSupabaseConfig,
+        headers: Object.keys(headers),
       });
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers,
+        });
+      } catch (fetchError) {
+        console.error("[API Error] Fetch failed:", {
+          url,
+          error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+        });
+        throw new Error(
+          `Network error: ${fetchError instanceof Error ? fetchError.message : "Failed to fetch resource"}`,
+        );
+      }
 
       const requestId = response.headers.get("X-Request-ID") || undefined;
 
@@ -71,6 +98,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         } catch {
           // ignore JSON parse errors and fall back to generic error below
         }
+
+        console.error("[API Error] Response error:", {
+          url,
+          status: response.status,
+          code: errorData?.error?.code,
+          message: errorData?.error?.message,
+        });
 
         const error = new ApiError(
           errorData?.error?.code || "UNKNOWN_ERROR",

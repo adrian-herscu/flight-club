@@ -252,7 +252,6 @@ DATABASE_URL="prod-url" npm run seed
 ## Security Notes
 
 - **Dev-mode bypass is DISABLED in production**: The `dev-mode-local-testing-token` authentication bypass only works when `NODE_ENV=development`. Vercel automatically sets `NODE_ENV=production`, so this bypass is completely disabled in deployments.
-- Never commit `.env.local` or `.env` files to git
 - Keep `SUPABASE_SERVICE_ROLE_KEY` secret - it has admin privileges
 - Rotate secrets regularly in Vercel and Supabase dashboards
 - Review Vercel access logs periodically

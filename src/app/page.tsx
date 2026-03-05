@@ -7,13 +7,20 @@ import type { UserMe } from "@/services/types";
 export default function HomePage() {
   const { data: user, loading, error } = useApiData<UserMe>("/api/v1/me");
 
-  const isAuthError = error && error.includes("authentication");
+  const isAuthError =
+    error &&
+    (error.includes("authentication") ||
+      error.includes("Invalid token") ||
+      error.includes("UNAUTHORIZED") ||
+      error.includes("Not authenticated") ||
+      error.includes("401"));
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (isAuthError) {
+  // Show login prompt for auth errors OR if no data and not a server error
+  if (isAuthError || (error && !user)) {
     return (
       <div className="p-2xl">
         <h1>Welcome to School Management System</h1>
@@ -26,6 +33,7 @@ export default function HomePage() {
             to access your account.
           </p>
         </div>
+        {error && <p style={{ fontSize: "0.875rem", color: "#666" }}>Debug: {error}</p>}
         <div className="mt-2xl">
           <p>Use the navigation menu to access different sections based on your role.</p>
         </div>

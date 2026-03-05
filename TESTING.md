@@ -169,11 +169,6 @@ Run only unit tests:
 npm test -- tests/sample.test.ts tests/contract/
 ```
 
-### Test expects specific API URL?
-Check `tests/setup.ts` and `.env.local` to ensure NEXT_PUBLIC_API_URL is set correctly:
-```
-NEXT_PUBLIC_API_URL=http://localhost:3000
-```
 
 ## VS Code Integration
 

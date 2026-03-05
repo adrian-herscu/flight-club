@@ -144,7 +144,7 @@ The `/api/v1/me` endpoint supports a dev mode bypass for local testing:
 
 **Usage**:
 ```bash
-# In .env.local
+# In .env
 NODE_ENV=development
 
 # In tests or API clients

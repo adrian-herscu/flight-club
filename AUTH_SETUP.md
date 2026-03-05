@@ -140,33 +140,6 @@ curl -H "Authorization: Bearer dev-mode-local-testing-token" \
 ⚠️ **Security Note**: This bypass is **disabled** in production. Any attempt to use the dev token when `NODE_ENV !== "development"` returns HTTP 401.
 3. This is needed for backend JWT verification
 
-### 4.2 Create `.env.local`
-
-Create or update `.env.local` in the project root:
-
-```dotenv
-# Supabase Cloud Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://iybjgpzqmgxeopywkzkz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cPSqn0JW_g21z_tvDQn98Q_2SrLFm_u
-
-# Database Connection (for Prisma)
-# Format: postgresql://user:password@host:port/database
-# Note: Special characters in password must be URL-encoded
-DATABASE_URL="postgresql://postgres:PASSWORD%3Eyt6R%2A%5DVx_s@db.iybjgpzqmgxeopywkzkz.supabase.co:5432/postgres"
-
-# JWT Secret (for backend token verification)
-SUPABASE_JWT_SECRET="+/6y78gtHHU34PS9gqPlf4aP6ueXiY3hsUwKhF14//rqR4v7v+jW3NbaK/rVee0fG0ebkVNyWBC41tttamhgBA=="
-
-# API Base URL
-NEXT_PUBLIC_API_URL=http://localhost:3000
-```
-
-**⚠️ Security Notes**:
-- Never commit `.env.local` to git (already in `.gitignore`)
-- Special characters in the DB password must be URL-encoded:
-  - `>` becomes `%3E`
-  - `*` becomes `%2A`
-  - `]` becomes `%5D`
 
 ---
 
@@ -243,7 +216,7 @@ Authorized redirect URIs:
 - https://yourdomain.com/auth/v1/callback  ← Add this for production
 ```
 
-No changes needed to your app code or `.env.local` — the OAuth flow automatically detects the redirect source.
+No changes needed to your app code or `.env` — the OAuth flow automatically detects the redirect source.
 
 ### 7.2 Update `.env.production`
 
@@ -331,7 +304,7 @@ This allows testing without Google OAuth. Click **"Dev Login"** button to use th
 
 ### "Environment variable not found: DATABASE_URL"
 
-**Cause**: `.env.local` not loaded into shell.
+**Cause**: `.env` not loaded into shell.
 
 **Fix**:
 ```bash
@@ -339,7 +312,7 @@ export DATABASE_URL="postgresql://..."
 npx prisma db pull  # or any prisma command
 ```
 
-Or use a new terminal session after updating `.env.local`.
+Or use a new terminal session after updating `.env`.
 
 ### User profile not showing
 
@@ -356,7 +329,7 @@ Or use a new terminal session after updating `.env.local`.
 
 | File | Purpose |
 |------|---------|
-| `.env.local` | Environment variables (not committed) |
+| `.env` | Local development environment variables |
 | `src/services/supabaseClient.ts` | Supabase client initialization |
 | `src/lib/middleware/auth.ts` | JWT verification & user extraction |
 | `src/app/(auth)/login/page.tsx` | Login page with Google & dev buttons |

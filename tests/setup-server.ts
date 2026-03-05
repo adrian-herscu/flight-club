@@ -6,9 +6,21 @@ import { spawn, exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
+const TEST_PORT = Number(process.env.TEST_SERVER_PORT || "3000");
+const TEST_BASE_URL = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${TEST_PORT}`;
+
+async function isPortInUse(port: number = TEST_PORT): Promise<boolean> {
+  try {
+    const { stdout } = await execAsync(`lsof -ti:${port}`);
+    return stdout.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
 
 let serverProcess: any = null;
 let serverStarted = false;
+let startedByTests = false;
 
 export async function startDevServer() {
   if (serverStarted) {
@@ -23,10 +35,36 @@ export async function startDevServer() {
     return;
   }
 
+  // If the port is already occupied, do not try to spawn another server.
+  // This prevents EADDRINUSE races when manually rerunning tests.
+  const portInUse = await isPortInUse(TEST_PORT);
+  if (portInUse) {
+    console.log(`✓ Port ${TEST_PORT} already in use; reusing existing server process`);
+    serverStarted = true;
+    startedByTests = false;
+    return;
+  }
+
   console.log("🚀 Starting dev server...");
 
   return new Promise((resolve, reject) => {
-    serverProcess = spawn("npm", ["run", "dev"], {
+    let settled = false;
+
+    const resolveOnce = () => {
+      if (!settled) {
+        settled = true;
+        resolve(true);
+      }
+    };
+
+    const rejectOnce = (error: Error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    };
+
+    serverProcess = spawn("npm", ["run", "dev", "--", "-p", String(TEST_PORT)], {
       cwd: process.cwd(),
       stdio: "pipe",
       shell: true,
@@ -41,12 +79,21 @@ export async function startDevServer() {
       // Look for the "ready" message from Next.js
       if (output.includes("ready") || output.includes("started server")) {
         serverStarted = true;
-        resolve(true);
+        startedByTests = true;
+        resolveOnce();
       }
     });
 
     serverProcess.stderr.on("data", (data: Buffer) => {
       const output = data.toString();
+
+      if (output.includes("EADDRINUSE")) {
+        serverStarted = true;
+        startedByTests = false;
+        resolveOnce();
+        return;
+      }
+
       if (output.includes("error") || output.includes("Error")) {
         console.error(output);
       }
@@ -54,22 +101,22 @@ export async function startDevServer() {
 
     serverProcess.on("error", (error: Error) => {
       console.error("Failed to start dev server:", error);
-      reject(error);
+      rejectOnce(error);
     });
 
     // Timeout after 45 seconds
     setTimeout(() => {
       if (serverStarted) {
-        resolve(true);
+        resolveOnce();
       } else {
-        reject(new Error("Dev server failed to start within 45 seconds"));
+        rejectOnce(new Error("Dev server failed to start within 45 seconds"));
       }
     }, 45000);
   });
 }
 
 export async function stopDevServer() {
-  if (!serverProcess || !serverStarted) {
+  if (!serverProcess || !serverStarted || !startedByTests) {
     return;
   }
 
@@ -93,7 +140,7 @@ export async function stopDevServer() {
   });
 }
 
-export async function isServerRunning(url: string = "http://localhost:3000"): Promise<boolean> {
+export async function isServerRunning(url: string = TEST_BASE_URL): Promise<boolean> {
   try {
     const response = await fetch(url + "/api/v1/health", {
       signal: AbortSignal.timeout(2000),

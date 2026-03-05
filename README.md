@@ -36,9 +36,6 @@ This includes:
 npm install
 npx prisma generate
 
-# Configure environment variables
-cp .env.local.example .env.local
-# Edit .env.local with Supabase credentials (see AUTH_SETUP.md Section 4.2)
 
 # Deploy migrations to cloud database
 export DATABASE_URL="postgresql://..."  # URL-encoded password
@@ -170,3 +167,4 @@ For a solo team building a prototype (target: <1000 concurrent users):
 
 The architecture is still modular - services, middleware, and routes are cleanly separated in `src/lib/` despite being deployed together.
 
+# Pipeline test - 1772522027

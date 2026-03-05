@@ -79,7 +79,9 @@ describe("E2E: Backend API Integration", () => {
 describe("E2E: Error Handling", () => {
   it("should handle non-existent endpoints gracefully", async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/nonexistent`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/nonexistent`, {
+        signal: AbortSignal.timeout(3000),
+      });
       expect(response.status).toBe(404);
     } catch (error) {
       // Backend might not be running, which is ok for this test

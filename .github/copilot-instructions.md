@@ -245,7 +245,7 @@ When context files don't provide specific guidance:
 
 
 ### TypeScript / Next.js (unified full-stack)
-  scripts alongside the DDL, never in ad-hoc scripts. Every data migration MUST
+
 - Target **TypeScript 5.x**; use strict mode throughout.
 - **Code Validation**: After generating TypeScript code, validate compilation by running
   `npm run build` or `npx tsc --noEmit`. Never commit code that fails type checking.
@@ -257,7 +257,6 @@ When context files don't provide specific guidance:
   are thin — no logic beyond input validation and service delegation.
 - All tenant-scoped DB queries MUST filter by `school_id` (see Principle I).
 - JWT verification uses `jose` library with Supabase's public JWKS endpoint; never hardcode keys.
-- Supabase service-role key is server-side only (in `.env.local`); never expose to frontend.
 - **Error Handling**:
   - **Database Errors**: Never wrap Prisma calls in try/catch. Global middleware in
     `src/lib/prisma.ts` handles error mapping (P2002 → CONFLICT, P2003/P2025 → NOT_FOUND, P2004 → CONFLICT).
@@ -275,7 +274,7 @@ When context files don't provide specific guidance:
   state, `info` for normal operations, `warn` for recoverable issues, `error` for exceptions.
   Never log PII (email, name, ID numbers) at `debug`/`info` level.
 - **Migrations**: all schema and data changes use Prisma migrations.
-  Data migrations (backfills, reshaping, seed data) generated via `npx prisma migrate`.
+  Data migrations (backfills, reshaping, seed data) generated via `npx prisma migrate` must
   be idempotent. Backfills MUST process rows in batches (≤ 500 rows/transaction)
   to avoid table locks. Tenant CSV onboarding is an API feature, not a migration.
 - Follow `backend/src/` naming: `snake_case` modules, `PascalCase` models,
@@ -325,10 +324,12 @@ When context files don't provide specific guidance:
 
 ### Secrets & Environment
 
-- Frontend secrets: Vercel environment variables only.
-- Backend secrets: Render environment variables only.
-- Supabase service-role key: backend Render env var; never in frontend or git.
-- Local development: `.env.local` (git-ignored); never commit `.env` files.
+- **Deployment**: Both frontend and backend are deployed on Vercel.
+- **Database**: Supabase PostgreSQL (managed separately).
+- **Frontend secrets**: Vercel environment variables only.
+- **Backend secrets**: Vercel environment variables only.
+- **Supabase service-role key**: Backend Vercel env var; never in frontend or git.
+- **Local development**: `.env` committed
 
 ### Bash Scripting
 

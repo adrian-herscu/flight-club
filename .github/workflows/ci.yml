@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  deployments: write
+  issues: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Lockfile → Lint → Test → Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test_db"
+      DIRECT_URL: "postgresql://test:test@localhost:5432/test_db"
+      NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key"
+      NEXT_PUBLIC_API_URL: "http://localhost:3000"
+      SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key"
+      SUPABASE_JWT_SECRET: "test-jwt-secret"
+      NODE_ENV: "development"
+      CI: "true"
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Check lockfile is in sync with package.json
+        run: |
+          npm install --dry-run --package-lock-only 2>&1 | tee /tmp/npm-check.log
+          if grep -q "added\|removed\|changed" /tmp/npm-check.log; then
+            echo "Error: package-lock.json is out of sync with package.json"
+            echo "Run 'npm install' locally and commit the updated package-lock.json"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --fund=false --legacy-peer-deps
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed test database
+        run: npm run seed
+
+      - name: Run tests
+        run: npm test
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}

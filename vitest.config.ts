@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   test: {
     globals: true,
     environment: "jsdom",
+    fileParallelism: false,
     setupFiles: ["./tests/setup.ts"],
     env: loadEnv(mode, process.cwd(), ""),
     include: ["tests/**/*.{test,spec}.{ts,tsx}", "src/**/*.{test,spec}.{ts,tsx}"],

@@ -36,25 +36,6 @@
         "cursor-global": true,
         "cursor-workspace": true
     },
-
-    "sqltools.connections": [
-        {
-            "pgOptions": {
-                "ssl": {
-                    "rejectUnauthorized": false
-                }
-            },
-            "ssh": "Disabled",
-            "previewLimit": 50,
-            "server": "db.iybjgpzqmgxeopywkzkz.supabase.co",
-            "port": 5432,
-            "driver": "PostgreSQL",
-            "password": "AYYC>yt6R*]Vx_s",
-            "username": "postgres",
-            "name": "Supabase-DB",
-            "database": "postgres"
-        }
-    ],
     "chat.mcp.serverSampling": {
         "flight-club/.vscode/mcp.json: playwright": {
             "allowedModels": [
