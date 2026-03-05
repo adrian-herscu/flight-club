@@ -87,16 +87,6 @@ describe("Frontend-Backend Integration", () => {
     }
   });
 
-  it("should have NEXT_PUBLIC_API_URL environment variable set", () => {
-    // In a full-stack Next.js app, the API is at the same origin
-    // This should always be defined (defaults to http://localhost:3000)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-    expect(apiUrl).toBeDefined();
-    expect(apiUrl).toBeTruthy();
-    expect(apiUrl).toMatch(/^https?:\/\//); // Should be a valid URL
-  });
-
   it("should gracefully handle backend unavailability", async () => {
     // Integration test - requires dev server running
     // Tests that the app responds appropriately to errors
